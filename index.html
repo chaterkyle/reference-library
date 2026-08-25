@@ -91,20 +91,50 @@
   #home { margin-top: 32px; }
   .tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
   }
   .category-tile {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 14px;
+    padding: 0;
     cursor: pointer;
+    overflow: hidden;
     transition: border-color 0.15s ease, transform 0.15s ease;
   }
-  .category-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .category-tile .emoji { font-size: 28px; }
-  .category-tile h3 { margin: 10px 0 2px; font-size: 16px; }
+  .category-tile:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+  .tile-preview {
+    position: relative;
+    height: 140px;
+    background: var(--canvas-bg);
+    overflow: hidden;
+  }
+  .tile-preview img {
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid var(--panel);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  }
+  .tile-preview .p1 { left: 14px; top: 18px; transform: rotate(-6deg); z-index: 1; }
+  .tile-preview .p2 { left: 78px; top: 8px; transform: rotate(3deg); z-index: 2; }
+  .tile-preview .p3 { left: 142px; top: 20px; transform: rotate(-2deg); z-index: 1; }
+  .tile-preview .p-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    opacity: 0.25;
+  }
+
+  .tile-body { padding: 14px 18px 18px; }
+  .category-tile h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
   .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
   .category-tile .tile-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 0; }
 
@@ -182,6 +212,46 @@
     letter-spacing: 0.04em;
   }
   .zone-label .zone-count { font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+
+  .annotation {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: grab;
+    outline: none;
+    min-width: 40px;
+    min-height: 28px;
+  }
+  .annotation:hover, .annotation:focus { background: rgba(255,255,255,0.06); }
+  .annotation.dragging { cursor: grabbing; }
+  .annotation-toolbar {
+    display: none;
+    position: absolute;
+    top: -34px;
+    left: 0;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    gap: 4px;
+    z-index: 20;
+  }
+  .annotation-toolbar.open { display: flex; }
+  .annotation-toolbar .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .annotation-toolbar .del {
+    width: 16px; height: 16px; border-radius: 4px; cursor: pointer;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-size: 11px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .canvas-viewport.placing-text { cursor: crosshair; }
 
   .empty-state {
     position: absolute;
@@ -417,6 +487,7 @@
   <div class="stars-batch" id="batchStars">
     <span data-value="1">★</span><span data-value="2">★</span><span data-value="3">★</span><span data-value="4">★</span><span data-value="5">★</span>
   </div>
+  <button class="clear-sel" id="newCategoryBtn">+ New category</button>
   <button class="clear-sel" id="clearSelection">Clear</button>
 </div>
 
@@ -568,10 +639,14 @@ CATEGORIES.forEach(cat => {
 });
 
 // ---------- State ----------
-let ratings = {}; // imageId -> { stars, note, deleted, movedTo, x, y }
+let ratings = {}; // imageId -> { stars, note, deleted, movedTo, pendingNewCategory, x, y }
+let annotations = {}; // annotationId -> { catId, text, color, x, y, deleted }
 const cardIndex = {}; // imageId -> dom refs
+const annotationIndex = {}; // annotationId -> { el, toolbarEl }
 const canvasState = {}; // catId -> { panX, panY, zoom, viewportEl, worldEl }
 let selected = new Set();
+const ANNOTATION_COLORS = ["#eaeaec", "#f5c542", "#7c9cff", "#e06b6b", "#6bd48a", "#c77dff"];
+const ANNOTATIONS_API = "https://reference-library-ratings.image-ref.workers.dev/annotations";
 
 function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
 function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file}`; }
@@ -619,6 +694,19 @@ function totalImageCount(cat) {
   return cat.images.length;
 }
 
+function previewThumbs(cat) {
+  const groups = cat.subs || [{ folder: cat.folder, images: cat.images }];
+  const thumbs = [];
+  for (const g of groups) {
+    for (const img of g.images) {
+      if (isVideo(img.file)) continue; // stick to stills for the preview collage
+      thumbs.push(`images/${g.folder}/${img.file}`);
+      if (thumbs.length >= 3) return thumbs;
+    }
+  }
+  return thumbs;
+}
+
 CATEGORIES.forEach(cat => {
   const a = document.createElement('a');
   a.href = `#${cat.id}`;
@@ -626,14 +714,21 @@ CATEGORIES.forEach(cat => {
   a.addEventListener('click', (e) => { e.preventDefault(); showCategory(cat.id); });
   catnav.appendChild(a);
 
+  const thumbs = previewThumbs(cat);
   const tile = document.createElement('div');
   tile.className = 'category-tile';
   tile.dataset.cat = cat.id;
   tile.innerHTML = `
-    <div class="emoji">${cat.emoji}</div>
-    <h3>${cat.title}</h3>
-    <p class="tile-count">${totalImageCount(cat)} images</p>
-    <p class="tile-desc">${cat.desc || ''}</p>
+    <div class="tile-preview">
+      ${thumbs.length
+        ? thumbs.map((src, i) => `<img class="p${i + 1}" src="${src}" loading="lazy" alt="">`).join('')
+        : `<div class="p-empty">${cat.emoji}</div>`}
+    </div>
+    <div class="tile-body">
+      <h3>${cat.emoji} ${cat.title}</h3>
+      <p class="tile-count">${totalImageCount(cat)} images</p>
+      <p class="tile-desc">${cat.desc || ''}</p>
+    </div>
   `;
   tile.addEventListener('click', () => showCategory(cat.id));
   tileGrid.appendChild(tile);
@@ -658,6 +753,8 @@ CATEGORIES.forEach(cat => {
     <button class="zoom-in">+</button>
     <button class="zoom-reset">Reset view</button>
     <button class="organize">Organize</button>
+    <button class="add-text">+ Text</button>
+    <span style="font-size:11px;color:var(--muted);">Shift+drag empty space to box-select</span>
   `;
   catEl.appendChild(controls);
 
@@ -813,23 +910,84 @@ function applyTransform(catId) {
 function initCanvasInteractions(catId, controls) {
   const st = canvasState[catId];
   const vp = st.viewportEl;
+  let placingText = false;
 
   let panning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
+  let marquee = null, marqueeStart = { x: 0, y: 0 };
+
+  function worldPointFromEvent(e) {
+    const rect = vp.getBoundingClientRect();
+    const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    return { x: (px - st.panX) / st.zoom, y: (py - st.panY) / st.zoom };
+  }
 
   vp.addEventListener('mousedown', (e) => {
-    if (e.target.closest('figure.card')) return; // card drag handles itself
+    if (e.target.closest('figure.card, .annotation-wrap')) return; // handled by drag logic below
+
+    if (placingText) {
+      const wp = worldPointFromEvent(e);
+      createAnnotationAt(catId, Math.round(wp.x), Math.round(wp.y));
+      placingText = false;
+      vp.classList.remove('placing-text');
+      return;
+    }
+
+    if (e.shiftKey) {
+      // Start rectangle marquee select
+      const rect = vp.getBoundingClientRect();
+      marqueeStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      marquee = document.createElement('div');
+      marquee.style.position = 'absolute';
+      marquee.style.border = '1px dashed var(--accent)';
+      marquee.style.background = 'rgba(124,156,255,0.1)';
+      marquee.style.zIndex = '5';
+      marquee.style.left = marqueeStart.x + 'px';
+      marquee.style.top = marqueeStart.y + 'px';
+      vp.appendChild(marquee);
+      return;
+    }
+
     panning = true;
     vp.classList.add('panning');
     panStart = { x: e.clientX, y: e.clientY };
     panOrigin = { x: st.panX, y: st.panY };
   });
+
   window.addEventListener('mousemove', (e) => {
+    if (marquee) {
+      const rect = vp.getBoundingClientRect();
+      const curX = e.clientX - rect.left, curY = e.clientY - rect.top;
+      const left = Math.min(curX, marqueeStart.x), top = Math.min(curY, marqueeStart.y);
+      const w = Math.abs(curX - marqueeStart.x), h = Math.abs(curY - marqueeStart.y);
+      Object.assign(marquee.style, { left: left + 'px', top: top + 'px', width: w + 'px', height: h + 'px' });
+      return;
+    }
     if (!panning) return;
     st.panX = panOrigin.x + (e.clientX - panStart.x);
     st.panY = panOrigin.y + (e.clientY - panStart.y);
     applyTransform(catId);
   });
-  window.addEventListener('mouseup', () => { panning = false; vp.classList.remove('panning'); });
+
+  window.addEventListener('mouseup', () => {
+    if (marquee) {
+      const mRect = marquee.getBoundingClientRect();
+      Object.entries(cardIndex).forEach(([id, c]) => {
+        if (c.cardEl.dataset.cat !== catId || c.cardEl.style.display === 'none') return;
+        const cRect = c.cardEl.getBoundingClientRect();
+        const intersects = !(cRect.right < mRect.left || cRect.left > mRect.right || cRect.bottom < mRect.top || cRect.top > mRect.bottom);
+        if (intersects && !selected.has(id)) toggleSelect(id);
+      });
+      marquee.remove();
+      marquee = null;
+    }
+    panning = false;
+    vp.classList.remove('panning');
+  });
+
+  controls.querySelector('.add-text').addEventListener('click', () => {
+    placingText = true;
+    vp.classList.add('placing-text');
+  });
 
   vp.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -857,90 +1015,81 @@ function initCanvasInteractions(catId, controls) {
   });
   controls.querySelector('.organize').addEventListener('click', () => organize(catId));
 
-  // Card dragging
-  let dragCard = null, dragStart = { x: 0, y: 0 }, cardStart = { x: 0, y: 0 }, moved = false;
+  // Dragging — images (figure.card) and text annotations (.annotation-wrap) share this logic
+  let dragEl = null, dragKind = null, dragStart = { x: 0, y: 0 }, elStart = { x: 0, y: 0 }, moved = false;
   vp.addEventListener('mousedown', (e) => {
     const cardEl = e.target.closest('figure.card');
-    if (!cardEl) return;
-    if (e.target.closest('.select-check, .delete-x, .rating-row, .note-editor, .move-select')) return;
-    dragCard = cardEl;
+    const annEl = e.target.closest('.annotation-wrap');
+    if (cardEl) {
+      if (e.target.closest('.select-check, .delete-x, .rating-row, .note-editor, .move-select')) return;
+      dragEl = cardEl; dragKind = 'card';
+    } else if (annEl) {
+      if (e.target.closest('.annotation-toolbar')) return;
+      if (document.activeElement === annEl.querySelector('.annotation')) return; // already editing text, let cursor placement work
+      dragEl = annEl; dragKind = 'annotation';
+    } else {
+      return;
+    }
     moved = false;
     dragStart = { x: e.clientX, y: e.clientY };
-    cardStart = { x: parseFloat(cardEl.style.left), y: parseFloat(cardEl.style.top) };
+    elStart = { x: parseFloat(dragEl.style.left), y: parseFloat(dragEl.style.top) };
     e.stopPropagation();
   });
   window.addEventListener('mousemove', (e) => {
-    if (!dragCard) return;
+    if (!dragEl) return;
     const dx = (e.clientX - dragStart.x) / st.zoom;
     const dy = (e.clientY - dragStart.y) / st.zoom;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
       moved = true;
-      dragCard.classList.add('dragging');
+      dragEl.classList.add('dragging');
     }
     if (moved) {
-      dragCard.style.left = snap(cardStart.x + dx) + 'px';
-      dragCard.style.top = snap(cardStart.y + dy) + 'px';
+      dragEl.style.left = snap(elStart.x + dx) + 'px';
+      dragEl.style.top = snap(elStart.y + dy) + 'px';
     }
   });
   window.addEventListener('mouseup', (e) => {
-    if (!dragCard) return;
-    const id = dragCard.dataset.id;
+    if (!dragEl) return;
+    const id = dragEl.dataset.id;
+    const x = parseFloat(dragEl.style.left), y = parseFloat(dragEl.style.top);
     if (moved) {
-      dragCard.classList.remove('dragging');
-      const x = parseFloat(dragCard.style.left), y = parseFloat(dragCard.style.top);
-      persistPosition(id, x, y);
-    } else {
-      // treat as click -> open lightbox
+      dragEl.classList.remove('dragging');
+      if (dragKind === 'card') persistPosition(id, x, y);
+      else persistAnnotation(id, { x, y });
+    } else if (dragKind === 'card') {
       const c = cardIndex[id];
       if (c) openLightbox(c.src, c.caption, c.isVideo);
+    } else if (dragKind === 'annotation') {
+      annotationIndex[id].textEl.focus();
     }
-    dragCard = null;
+    dragEl = null; dragKind = null;
   });
 }
 
-function findNearestFreeCell(desiredCol, desiredRow, occupied) {
-  if (!occupied.has(`${desiredCol},${desiredRow}`) && desiredCol >= 0 && desiredRow >= 0) {
-    return [desiredCol, desiredRow];
-  }
-  for (let radius = 1; radius < 200; radius++) {
-    for (let dc = -radius; dc <= radius; dc++) {
-      for (let dr = -radius; dr <= radius; dr++) {
-        if (Math.max(Math.abs(dc), Math.abs(dr)) !== radius) continue; // only the ring at this radius
-        const col = desiredCol + dc, row = desiredRow + dr;
-        if (col < 0 || row < 0) continue;
-        const key = `${col},${row}`;
-        if (!occupied.has(key)) return [col, row];
-      }
-    }
-  }
-  return [desiredCol, desiredRow]; // fallback, shouldn't happen
-}
-
-// "Organize": snap each visible card into the nearest clean grid cell to its CURRENT
-// position — cleans up spacing/alignment without reordering by any other criteria.
+// "Organize": pack every visible card into a dense grid (no leftover gaps),
+// ordered to roughly match current position (reading order: top-to-bottom, left-to-right)
+// so relative arrangement is preserved even though spacing is fully compacted.
 function organize(catId) {
   const cellW = CARD_W + COL_GAP, cellH = CARD_H + ROW_GAP;
   const cards = Object.entries(cardIndex).filter(([id, c]) => c.cardEl.dataset.cat === catId && c.cardEl.style.display !== 'none');
   if (!cards.length) return;
 
-  const originX = Math.min(...cards.map(([, c]) => parseFloat(c.cardEl.style.left)));
-  const originY = Math.min(...cards.map(([, c]) => parseFloat(c.cardEl.style.top)));
-
-  const withCells = cards.map(([id, c]) => {
-    const x = parseFloat(c.cardEl.style.left), y = parseFloat(c.cardEl.style.top);
-    return {
-      id, c,
-      idealCol: Math.max(0, Math.round((x - originX) / cellW)),
-      idealRow: Math.max(0, Math.round((y - originY) / cellH)),
-    };
+  const withPos = cards.map(([id, c]) => ({
+    id, c,
+    x: parseFloat(c.cardEl.style.left),
+    y: parseFloat(c.cardEl.style.top),
+  }));
+  // Band into rows using half a card-height as tolerance, so near-aligned rows sort cleanly
+  // even if not pixel-perfect, then order left-to-right within each row.
+  const rowBand = CARD_H / 2;
+  withPos.sort((a, b) => {
+    const bandA = Math.round(a.y / rowBand), bandB = Math.round(b.y / rowBand);
+    return bandA - bandB || a.x - b.x;
   });
-  // Process in reading order so collisions resolve predictably (top-left first).
-  withCells.sort((a, b) => a.idealRow - b.idealRow || a.idealCol - b.idealCol);
 
-  const occupied = new Set();
-  withCells.forEach(item => {
-    const [col, row] = findNearestFreeCell(item.idealCol, item.idealRow, occupied);
-    occupied.add(`${col},${row}`);
+  const originX = 20, originY = 20;
+  withPos.forEach((item, i) => {
+    const col = i % COLS, row = Math.floor(i / COLS);
     const x = originX + col * cellW, y = originY + row * cellH;
     item.c.cardEl.style.left = x + 'px';
     item.c.cardEl.style.top = y + 'px';
@@ -1005,6 +1154,99 @@ function updateTileCounts() {
     const tile = document.querySelector(`.category-tile[data-cat="${cat.id}"] .tile-count`);
     if (tile) tile.textContent = `${remaining} images`;
   });
+}
+
+// ---------- Text annotations ----------
+async function fetchAnnotations() {
+  try {
+    const res = await fetch(ANNOTATIONS_API);
+    annotations = await res.json();
+  } catch (e) {
+    console.warn('Could not load annotations', e);
+    annotations = {};
+  }
+  Object.entries(annotations).forEach(([id, rec]) => {
+    if (rec.deleted) return;
+    const world = canvasState[rec.catId] && canvasState[rec.catId].worldEl;
+    if (world) renderAnnotationEl(id, rec, world);
+  });
+}
+
+function renderAnnotationEl(id, rec, world) {
+  const wrap = document.createElement('div');
+  wrap.className = 'annotation-wrap';
+  wrap.style.position = 'absolute';
+  wrap.style.left = rec.x + 'px';
+  wrap.style.top = rec.y + 'px';
+  wrap.dataset.id = id;
+  wrap.dataset.cat = rec.catId;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'annotation-toolbar';
+  toolbar.addEventListener('mousedown', (e) => e.stopPropagation());
+  ANNOTATION_COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.background = c;
+    sw.addEventListener('click', () => { el.style.color = c; persistAnnotation(id, { color: c }); });
+    toolbar.appendChild(sw);
+  });
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.textContent = '✕';
+  del.addEventListener('click', () => {
+    persistAnnotation(id, { deleted: true });
+    wrap.remove();
+    delete annotationIndex[id];
+  });
+  toolbar.appendChild(del);
+  wrap.appendChild(toolbar);
+
+  const el = document.createElement('div');
+  el.className = 'annotation';
+  el.contentEditable = 'true';
+  el.textContent = rec.text || 'New label';
+  el.style.color = rec.color || '#eaeaec';
+  el.style.left = '0';
+  el.style.top = '0';
+  el.style.position = 'relative';
+  el.addEventListener('focus', () => toolbar.classList.add('open'));
+  el.addEventListener('blur', () => {
+    toolbar.classList.remove('open');
+    persistAnnotation(id, { text: el.textContent });
+  });
+  wrap.appendChild(el);
+
+  world.appendChild(wrap);
+  annotationIndex[id] = { el: wrap, textEl: el, toolbarEl: toolbar };
+  return wrap;
+}
+
+async function persistAnnotation(id, extra) {
+  const current = annotations[id] || { catId: extra.catId, text: '', color: '#eaeaec', x: 40, y: 40 };
+  annotations[id] = { ...current, ...extra };
+  const body = { annotationId: id, catId: annotations[id].catId, text: annotations[id].text, color: annotations[id].color, x: annotations[id].x, y: annotations[id].y, deleted: !!annotations[id].deleted, ...extra };
+  try {
+    await fetch(ANNOTATIONS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    console.warn('Could not save annotation', e);
+  }
+}
+
+function createAnnotationAt(catId, x, y) {
+  const id = 'ann-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const rec = { catId, text: 'New label', color: '#eaeaec', x, y, deleted: false };
+  annotations[id] = rec;
+  const world = canvasState[catId].worldEl;
+  const wrap = renderAnnotationEl(id, rec, world);
+  persistAnnotation(id, {});
+  const textEl = wrap.querySelector('.annotation');
+  textEl.focus();
+  document.execCommand('selectAll', false, null);
 }
 
 async function postRecord(id, extra) {
@@ -1117,7 +1359,21 @@ clearSelectionBtn.addEventListener('click', clearSelection);
   starEl.addEventListener('click', () => { selected.forEach(id => setRating(id, val)); clearSelection(); });
 });
 
+document.getElementById('newCategoryBtn').addEventListener('click', () => {
+  const name = prompt('Name for the new category:');
+  if (!name || !name.trim()) return;
+  const ids = [...selected];
+  ids.forEach(id => {
+    ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), pendingNewCategory: name.trim() };
+    postRecord(id, { pendingNewCategory: name.trim() });
+    removeCard(id);
+  });
+  clearSelection();
+  alert(`Marked ${ids.length} image(s) for a new "${name.trim()}" category. They're hidden for now — let Claude know and it'll build the real category and move them in.`);
+});
+
 fetchRatings();
+fetchAnnotations();
 </script>
 
 </body>
