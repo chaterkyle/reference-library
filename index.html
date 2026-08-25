@@ -8,10 +8,13 @@
   :root {
     --bg: #0e0e10;
     --panel: #17171a;
+    --panel2: #1d1d21;
     --border: #2a2a2e;
     --text: #eaeaec;
     --muted: #9a9aa0;
     --accent: #7c9cff;
+    --star: #f5c542;
+    --star-off: #3a3a3f;
   }
   * { box-sizing: border-box; }
   body {
@@ -21,23 +24,24 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   }
   header {
-    padding: 32px 40px 16px;
+    padding: 28px 40px 16px;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    background: rgba(14,14,16,0.92);
+    background: rgba(14,14,16,0.94);
     backdrop-filter: blur(8px);
-    z-index: 10;
+    z-index: 20;
   }
   h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
-  header p { margin: 0; color: var(--muted); font-size: 13px; }
-  nav {
+  header > p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  nav#catnav {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 16px;
   }
-  nav a {
+  nav#catnav a {
     color: var(--muted);
     text-decoration: none;
     font-size: 13px;
@@ -46,34 +50,92 @@
     border-radius: 20px;
     white-space: nowrap;
   }
-  nav a:hover { color: var(--text); border-color: var(--accent); }
-  main { padding: 8px 40px 80px; }
-  section { margin-top: 48px; scroll-margin-top: 140px; }
-  section h2 {
-    font-size: 18px;
+  nav#catnav a:hover { color: var(--text); border-color: var(--accent); }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .toolbar input[type="text"] {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    min-width: 220px;
+  }
+  .toolbar select {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .toolbar label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  main { padding: 8px 40px 100px; }
+
+  .category { margin-top: 44px; }
+  .category > h2 {
+    font-size: 20px;
+    margin: 0;
+    scroll-margin-top: 190px;
+  }
+  .category > p.desc {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  section.sub { margin-top: 26px; scroll-margin-top: 190px; }
+  section.sub h3 {
+    font-size: 15px;
     margin: 0 0 4px;
     display: flex;
     align-items: baseline;
     gap: 10px;
+    color: var(--text);
   }
-  section h2 .count { font-size: 12px; color: var(--muted); font-weight: 400; }
+  section.sub h3 .count { font-size: 12px; color: var(--muted); font-weight: 400; }
+
+  .empty-state {
+    margin-top: 10px;
+    padding: 18px 16px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 14px;
-    margin-top: 16px;
+    margin-top: 14px;
   }
-  figure {
+  figure.card {
     margin: 0;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
-    transition: border-color 0.15s ease;
+    display: flex;
+    flex-direction: column;
   }
-  figure:hover { border-color: var(--accent); }
-  figure img {
+  figure.card.hidden { display: none; }
+  .thumb-wrap { cursor: pointer; }
+  figure.card img, figure.card video {
     width: 100%;
     height: 220px;
     object-fit: cover;
@@ -81,11 +143,61 @@
     background: #000;
   }
   figcaption {
-    padding: 10px 12px;
+    padding: 10px 12px 4px;
     font-size: 12px;
     color: var(--muted);
     line-height: 1.4;
+    flex: 1;
   }
+
+  .rating-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px 10px;
+    gap: 8px;
+  }
+  .stars { display: flex; gap: 2px; cursor: pointer; }
+  .stars .star {
+    font-size: 16px;
+    color: var(--star-off);
+    line-height: 1;
+    user-select: none;
+  }
+  .stars .star.filled { color: var(--star); }
+  .note-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .note-btn.has-note { color: var(--accent); border-color: var(--accent); }
+  .note-editor {
+    display: none;
+    padding: 0 12px 12px;
+  }
+  .note-editor.open { display: block; }
+  .note-editor textarea {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 50px;
+  }
+  .note-editor .save-hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
   #lightbox {
     display: none;
     position: fixed;
@@ -96,12 +208,11 @@
     justify-content: center;
     padding: 40px;
     flex-direction: column;
-    cursor: zoom-out;
   }
   #lightbox.open { display: flex; }
-  #lightbox img {
+  #lightbox img, #lightbox video {
     max-width: 100%;
-    max-height: 78vh;
+    max-height: 74vh;
     object-fit: contain;
     border-radius: 4px;
   }
@@ -111,7 +222,6 @@
     max-width: 700px;
     text-align: center;
     font-size: 14px;
-    cursor: default;
   }
   #lightbox .close {
     position: absolute;
@@ -127,61 +237,74 @@
 
 <header>
   <h1>Reference Library</h1>
-  <p>Motion design reference, organized by theme — click any nav item to jump to a section.</p>
-  <nav id="nav"></nav>
+  <p>Motion design reference, organized by category → style. Star what's useful, note why, filter later.</p>
+  <nav id="catnav"></nav>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Search captions & notes…">
+    <label>Min rating
+      <select id="minRating">
+        <option value="0">Any</option>
+        <option value="1">★ 1+</option>
+        <option value="2">★★ 2+</option>
+        <option value="3">★★★ 3+</option>
+        <option value="4">★★★★ 4+</option>
+        <option value="5">★★★★★ 5</option>
+      </select>
+    </label>
+    <label>Sort
+      <select id="sortBy">
+        <option value="default">Default order</option>
+        <option value="rating-desc">Rating: high to low</option>
+        <option value="rated-first">Rated first</option>
+      </select>
+    </label>
+  </div>
 </header>
 
 <main id="main"></main>
 
 <div id="lightbox">
   <span class="close">&times;</span>
-  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-media"></div>
   <div class="cap" id="lightbox-cap"></div>
 </div>
 
 <script>
-const SECTIONS = [
+const RATINGS_API = "https://reference-library-ratings.image-ref.workers.dev/ratings";
+const AUTH_KEY = "kyle-ref-lib-2026";
+
+// ---------- Content ----------
+const CATEGORIES = [
   {
-    id: "cinematography-lighting",
-    emoji: "🔥",
-    title: "Cinematography & Lighting",
-    folder: "moody-volumetric-lighting",
-    images: [
-      { file: "moody-volumetric-lighting-001.jpg", caption: "Foggy street lamps casting orange-pink volumetric light cones over a road (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-002.jpg", caption: "Illuminated ruins glowing through dense fog with a visible light beam (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-003.jpg", caption: "Motion-blurred road at night with warm light bloom diffusing through fog (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-004.jpg", caption: "Car headlights cutting through purple fog in an open field at dusk (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-005.jpg", caption: "Foggy canal lined with trees, streetlights glowing warm against the mist (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-006.jpg", caption: "Tree-lined road tunnel with a single streetlight glowing through fog (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-007.jpg", caption: "Empty highway lined with sodium streetlights, dramatic fog haze (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-008.jpg", caption: "Minimal composition: a single light glowing red/pink through thick fog on a road (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-009.jpg", caption: "Industrial highway overpass at night, rows of streetlights diffused by fog (Pierre Putman)." },
-      { file: "moody-volumetric-lighting-010.jpg", caption: "Backlit figure in snow with dramatic radiating god-rays and long shadows (Mikko Lagerstedt)." }
-    ]
-  },
-  {
-    id: "color-grade",
-    emoji: "🎨",
-    title: "Color & Grade",
-    folder: "color-and-grade",
-    images: [
-      { file: "color-and-grade-001.jpg", caption: "Warm interior from 'Blue Curry' (GOBELINS) — magenta walls against orange sunlight, warm/cool complementary palette." },
-      { file: "color-and-grade-002.jpg", caption: "Night scene, same short: teal moonlight figure facing a glowing magenta-veined mango tree." },
-      { file: "color-and-grade-003.jpg", caption: "Abstract silhouetted dancers in overlapping translucent reds, oranges, and pinks." },
-      { file: "color-and-grade-004.jpg", caption: "Underwater plastic bags from 'The Beauty,' graded in a tight monochromatic teal for a cold, eerie mood." },
-      { file: "color-and-grade-005.jpg", caption: "Rusty toy robot with glowing green eyes against teal — classic teal/orange grade (Platige Image)." },
-      { file: "color-and-grade-006.png", caption: "Cyberpunk Japanese alley — red/pink foreground light against cyan shadows and signage." },
-      { file: "color-and-grade-007.jpg", caption: "Hooded character against a hot-pink gradient sky with teal-green mask accents." },
-      { file: "color-and-grade-008.jpg", caption: "Abstract 3D render, 'Heat' — glossy pink, coral, and pale-yellow forms on black." },
-      { file: "color-and-grade-009.jpg", caption: "Abstract textured render, 'Heat' — teal-grey surfaces streaked with green, orange, purple light." },
-      { file: "color-and-grade-010.jpg", caption: "Neon 3D render, 'Heat' — reflective grey form overlaid with electric pink, red, teal, lime streaks." }
+    id: "cinematography",
+    emoji: "📽️",
+    title: "Cinematography",
+    desc: "Real footage only — no CG, animation, or illustration.",
+    subs: [
+      {
+        id: "lighting", title: "Lighting", folder: "moody-volumetric-lighting",
+        images: [
+          { file: "moody-volumetric-lighting-001.jpg", caption: "Foggy street lamps casting orange-pink volumetric light cones over a road (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-002.jpg", caption: "Illuminated ruins glowing through dense fog with a visible light beam (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-003.jpg", caption: "Motion-blurred road at night with warm light bloom diffusing through fog (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-004.jpg", caption: "Car headlights cutting through purple fog in an open field at dusk (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-005.jpg", caption: "Foggy canal lined with trees, streetlights glowing warm against the mist (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-006.jpg", caption: "Tree-lined road tunnel with a single streetlight glowing through fog (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-007.jpg", caption: "Empty highway lined with sodium streetlights, dramatic fog haze (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-008.jpg", caption: "Minimal composition: a single light glowing red/pink through thick fog on a road (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-009.jpg", caption: "Industrial highway overpass at night, rows of streetlights diffused by fog (Pierre Putman)." },
+          { file: "moody-volumetric-lighting-010.jpg", caption: "Backlit figure in snow with dramatic radiating god-rays and long shadows (Mikko Lagerstedt)." }
+        ]
+      },
+      { id: "color-grading", title: "Color Grading", folder: "color-and-grade", images: [] },
+      { id: "composition", title: "Composition", folder: "composition", images: [] }
     ]
   },
   {
     id: "motion-camera",
     emoji: "🎬",
     title: "Motion & Camera Movement",
-    folder: "motion-and-camera-movement",
+    desc: "GIFs/MP4s preferred — motion doesn't read in a still. Currently stills pending video sourcing.",
     images: [
       { file: "motion-and-camera-movement-001.jpg", caption: "007 First Light title sequence — figure descending a colonnaded staircase, parallax depth (Territory)." },
       { file: "motion-and-camera-movement-002.jpg", caption: "Starfleet Academy titles — camera flying through a glowing warp-tunnel corridor (Picturemill)." },
@@ -193,49 +316,60 @@ const SECTIONS = [
       { file: "motion-and-camera-movement-008.jpg", caption: "LUDENS x Kojima x Anicorn film — extreme close-up watch face with directional motion blur." },
       { file: "motion-and-camera-movement-009.jpg", caption: "Aalo Atomic brand film — dynamic isometric aerial of a futuristic factory floor (Stylo Creative)." },
       { file: "motion-and-camera-movement-010.jpg", caption: "Aalo Atomic brand film — low-angle dynamic shot through a robotic assembly structure." }
-    ]
+    ],
+    folder: "motion-and-camera-movement"
   },
   {
-    id: "vfx-compositing",
-    emoji: "✨",
-    title: "VFX & Compositing",
-    folder: "vfx-and-compositing",
-    images: [
-      { file: "vfx-and-compositing-001.png", caption: "BTS: crew testing a practical particle/dust rig for Rings of Power S2's title sequence." },
-      { file: "vfx-and-compositing-002.png", caption: "BTS: hand-dropping powder onto a lit surface — a practical effects plate (Motionographer)." },
-      { file: "vfx-and-compositing-003.jpg", caption: "Full-CG eVTOL aircraft composited against a real Manhattan skyline (INK Studio for Joby Aviation)." },
-      { file: "vfx-and-compositing-004.jpg", caption: "Abstract CG close-up study of an aircraft's wing/nacelle surfaces and lighting (INK Studio)." },
-      { file: "vfx-and-compositing-005.jpg", caption: "Macro CG render of a transparent-case watch's internal mechanism (Tendril for Hublot)." },
-      { file: "vfx-and-compositing-006.jpg", caption: "CG humanoid robot composited into 'Sky Cry' music video (Mathematic)." },
-      { file: "vfx-and-compositing-007.jpg", caption: "Astronaut inside a CG spacecraft capsule — atmospheric sci-fi compositing ('Many Moons')." },
-      { file: "vfx-and-compositing-008.png", caption: "Photoreal CG creature close-up (INFECTED for Mercedes-Benz 'Follow')." },
-      { file: "vfx-and-compositing-009.jpg", caption: "Photoreal CG dinosaur composited into a live-action-style interior (Audi 'The Comeback')." },
-      { file: "vfx-and-compositing-010.jpg", caption: "CG particle/sphere simulation swirling in painterly liquid (Tendril for VIZIO)." }
-    ]
-  },
-  {
-    id: "typography-graphics",
-    emoji: "🔤",
-    title: "Typography & Graphics",
-    folder: "typography-and-graphics",
-    images: [
-      { file: "typography-and-graphics-001.jpg", caption: "3D-extruded kinetic type: 'I WILL FIGHT ANYBODY WHO SAYS I DON'T' (Jacob Gilbreath)." },
-      { file: "typography-and-graphics-002.jpg", caption: "3D type spelling 'For Making It All... NBC' with a script-lettering badge (Jacob Gilbreath)." },
-      { file: "typography-and-graphics-003.jpg", caption: "3D type blocks arranged around an illustrated vintage microphone (Jacob Gilbreath)." },
-      { file: "typography-and-graphics-004.jpg", caption: "'SIDE WAYS TYPOGRAPHIQUE' — angular black/cream sheared letterforms (Xtian Miller)." },
-      { file: "typography-and-graphics-005.jpg", caption: "'XTRA' poster — bold letters obscured by rough brush-stroke texture (Xtian Miller)." },
-      { file: "typography-and-graphics-006.jpg", caption: "Diagonal striped/chevron letterform pattern, Psalm 145:17 quote (Xtian Miller)." },
-      { file: "typography-and-graphics-007.jpg", caption: "'MAGNETISM' — bold type overlaid with radiating pink/orange contour lines (Xtian Miller)." },
-      { file: "typography-and-graphics-008.jpg", caption: "Pixel-glitch kinetic-type identity spread, 'Dynamic Branding' book." },
-      { file: "typography-and-graphics-009.gif", caption: "36 Days of Type — 'culture' spiraling into a radial kinetic-type pattern (Syddharth Mate)." },
-      { file: "typography-and-graphics-010.jpg", caption: "'GAME / EDGE / THE' — glitch cursor icons, green/blue on black (Flatwhite Motion, RED Hackathon)." }
+    id: "motion-design",
+    emoji: "🎨",
+    title: "Motion Design",
+    desc: "Style reference, organized by discipline.",
+    subs: [
+      {
+        id: "kinetic-typography", title: "Kinetic Typography", folder: "typography-and-graphics",
+        images: [
+          { file: "typography-and-graphics-001.jpg", caption: "3D-extruded kinetic type: 'I WILL FIGHT ANYBODY WHO SAYS I DON'T' (Jacob Gilbreath)." },
+          { file: "typography-and-graphics-002.jpg", caption: "3D type spelling 'For Making It All... NBC' with a script-lettering badge (Jacob Gilbreath)." },
+          { file: "typography-and-graphics-003.jpg", caption: "3D type blocks arranged around an illustrated vintage microphone (Jacob Gilbreath)." },
+          { file: "typography-and-graphics-004.jpg", caption: "'SIDE WAYS TYPOGRAPHIQUE' — angular black/cream sheared letterforms (Xtian Miller)." },
+          { file: "typography-and-graphics-005.jpg", caption: "'XTRA' poster — bold letters obscured by rough brush-stroke texture (Xtian Miller)." },
+          { file: "typography-and-graphics-006.jpg", caption: "Diagonal striped/chevron letterform pattern, Psalm 145:17 quote (Xtian Miller)." },
+          { file: "typography-and-graphics-007.jpg", caption: "'MAGNETISM' — bold type overlaid with radiating pink/orange contour lines (Xtian Miller)." },
+          { file: "typography-and-graphics-008.jpg", caption: "Pixel-glitch kinetic-type identity spread, 'Dynamic Branding' book." },
+          { file: "typography-and-graphics-009.gif", caption: "36 Days of Type — 'culture' spiraling into a radial kinetic-type pattern (Syddharth Mate)." },
+          { file: "typography-and-graphics-010.jpg", caption: "'GAME / EDGE / THE' — glitch cursor icons, green/blue on black (Flatwhite Motion, RED Hackathon)." }
+        ]
+      },
+      {
+        id: "vfx-compositing", title: "VFX & Compositing", folder: "vfx-and-compositing",
+        images: [
+          { file: "vfx-and-compositing-001.png", caption: "BTS: crew testing a practical particle/dust rig for Rings of Power S2's title sequence." },
+          { file: "vfx-and-compositing-002.png", caption: "BTS: hand-dropping powder onto a lit surface — a practical effects plate (Motionographer)." },
+          { file: "vfx-and-compositing-003.jpg", caption: "Full-CG eVTOL aircraft composited against a real Manhattan skyline (INK Studio for Joby Aviation)." },
+          { file: "vfx-and-compositing-004.jpg", caption: "Abstract CG close-up study of an aircraft's wing/nacelle surfaces and lighting (INK Studio)." },
+          { file: "vfx-and-compositing-005.jpg", caption: "Macro CG render of a transparent-case watch's internal mechanism (Tendril for Hublot)." },
+          { file: "vfx-and-compositing-006.jpg", caption: "CG humanoid robot composited into 'Sky Cry' music video (Mathematic)." },
+          { file: "vfx-and-compositing-007.jpg", caption: "Astronaut inside a CG spacecraft capsule — atmospheric sci-fi compositing ('Many Moons')." },
+          { file: "vfx-and-compositing-008.png", caption: "Photoreal CG creature close-up (INFECTED for Mercedes-Benz 'Follow')." },
+          { file: "vfx-and-compositing-009.jpg", caption: "Photoreal CG dinosaur composited into a live-action-style interior (Audi 'The Comeback')." },
+          { file: "vfx-and-compositing-010.jpg", caption: "CG particle/sphere simulation swirling in painterly liquid (Tendril for VIZIO)." }
+        ]
+      },
+      {
+        id: "3d-cg", title: "3D / CG", folder: "color-and-grade",
+        images: [
+          { file: "color-and-grade-008.jpg", caption: "Abstract 3D render, 'Heat' — glossy pink, coral, and pale-yellow forms on black." },
+          { file: "color-and-grade-009.jpg", caption: "Abstract textured render, 'Heat' — teal-grey surfaces streaked with green, orange, purple light." },
+          { file: "color-and-grade-010.jpg", caption: "Neon 3D render, 'Heat' — reflective grey form overlaid with electric pink, red, teal, lime streaks." }
+        ]
+      }
     ]
   },
   {
     id: "ai-gen",
     emoji: "🤖",
     title: "AI-Gen Reference",
-    folder: "ai-gen-reference",
+    desc: null,
     images: [
       { file: "ai-gen-reference-001.jpg", caption: "Fish-headed man in a blue suit bursting through a yellow door — Magritte-style surrealism (Vuxten)." },
       { file: "ai-gen-reference-002.jpg", caption: "Lone red-robed figure beneath floating red paper umbrellas (SAN0)." },
@@ -247,13 +381,14 @@ const SECTIONS = [
       { file: "ai-gen-reference-008.jpg", caption: "Painterly glowing blue bird on a cherry-blossom branch beside soap bubbles (peam3178)." },
       { file: "ai-gen-reference-009.jpg", caption: "Ink-and-gold painting: white cat gazing through a circular window at a moonlit lake (Cinnadust)." },
       { file: "ai-gen-reference-010.jpg", caption: "Watercolor-style illustration: woman in a boat setting glowing lotus lanterns adrift (koyan0418439)." }
-    ]
+    ],
+    folder: "ai-gen-reference"
   },
   {
     id: "inspiration-sites",
     emoji: "🌐",
     title: "Saved from Inspiration Sites",
-    folder: "inspiration-sites",
+    desc: null,
     images: [
       { file: "inspiration-sites-001.jpg", caption: "Flat-vector illustration of a couple riding a vintage open-top car (Colin Hesterly)." },
       { file: "inspiration-sites-002.jpg", caption: "Glossy 3D illustration of a witch on a broomstick with a grinning moon and black cat (Morphine)." },
@@ -265,45 +400,250 @@ const SECTIONS = [
       { file: "inspiration-sites-008.jpg", caption: "Cinematic title-sequence still with cast credit typography (AMC's Dark Winds, Elastic)." },
       { file: "inspiration-sites-009.jpg", caption: "Smooth abstract 3D glass/liquid form in a red-blue gradient (George Stoyanov)." },
       { file: "inspiration-sites-010.jpg", caption: "Whimsical 3D typography: an inflatable 'B' letterform rigged like a kite (Quastudio)." }
-    ]
+    ],
+    folder: "inspiration-sites"
   }
 ];
 
-const nav = document.getElementById('nav');
+// ---------- State ----------
+let ratings = {}; // imageId -> { stars, note, updatedAt }
+const cardIndex = {}; // imageId -> { cardEl, starsEl, noteBtn, noteEditor, noteTextarea }
+
+function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
+
+function imageId(catId, subId, file) {
+  return `${catId}__${subId || "_"}__${file}`;
+}
+
+// ---------- Build DOM ----------
+const catnav = document.getElementById('catnav');
 const main = document.getElementById('main');
 
-SECTIONS.forEach(sec => {
+CATEGORIES.forEach(cat => {
   const a = document.createElement('a');
-  a.href = `#${sec.id}`;
-  a.textContent = `${sec.emoji} ${sec.title}`;
-  nav.appendChild(a);
+  a.href = `#${cat.id}`;
+  a.textContent = `${cat.emoji} ${cat.title}`;
+  catnav.appendChild(a);
 
-  const section = document.createElement('section');
-  section.id = sec.id;
-  section.innerHTML = `<h2>${sec.emoji} ${sec.title} <span class="count">${sec.images.length} images</span></h2>`;
-  const grid = document.createElement('div');
-  grid.className = 'grid';
-  sec.images.forEach(img => {
-    const fig = document.createElement('figure');
-    const src = `images/${sec.folder}/${img.file}`;
-    fig.innerHTML = `<img src="${src}" loading="lazy" alt=""><figcaption>${img.caption}</figcaption>`;
-    fig.addEventListener('click', () => openLightbox(src, img.caption));
-    grid.appendChild(fig);
-  });
-  section.appendChild(grid);
-  main.appendChild(section);
+  const catEl = document.createElement('div');
+  catEl.className = 'category';
+  catEl.id = cat.id;
+  catEl.innerHTML = `<h2>${cat.emoji} ${cat.title}</h2>` + (cat.desc ? `<p class="desc">${cat.desc}</p>` : '');
+
+  const renderImages = (images, folder, subId, container) => {
+    if (!images.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No images yet — pending sourcing.';
+      container.appendChild(empty);
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    images.forEach(img => {
+      const id = imageId(cat.id, subId, img.file);
+      const src = `images/${folder}/${img.file}`;
+      const fig = document.createElement('figure');
+      fig.className = 'card';
+      fig.dataset.id = id;
+      fig.dataset.caption = img.caption.toLowerCase();
+
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'thumb-wrap';
+      thumbWrap.innerHTML = isVideo(img.file)
+        ? `<video src="${src}" muted loop playsinline></video>`
+        : `<img src="${src}" loading="lazy" alt="">`;
+      thumbWrap.addEventListener('click', () => openLightbox(src, img.caption, isVideo(img.file)));
+      if (isVideo(img.file)) {
+        const v = thumbWrap.querySelector('video');
+        thumbWrap.addEventListener('mouseenter', () => v.play());
+        thumbWrap.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
+      }
+      fig.appendChild(thumbWrap);
+
+      const figcap = document.createElement('figcaption');
+      figcap.textContent = img.caption;
+      fig.appendChild(figcap);
+
+      const ratingRow = document.createElement('div');
+      ratingRow.className = 'rating-row';
+      const starsEl = document.createElement('div');
+      starsEl.className = 'stars';
+      for (let i = 1; i <= 5; i++) {
+        const s = document.createElement('span');
+        s.className = 'star';
+        s.textContent = '★';
+        s.dataset.value = i;
+        s.addEventListener('click', () => setRating(id, i));
+        starsEl.appendChild(s);
+      }
+      const noteBtn = document.createElement('button');
+      noteBtn.className = 'note-btn';
+      noteBtn.textContent = 'why?';
+      ratingRow.appendChild(starsEl);
+      ratingRow.appendChild(noteBtn);
+      fig.appendChild(ratingRow);
+
+      const noteEditor = document.createElement('div');
+      noteEditor.className = 'note-editor';
+      const textarea = document.createElement('textarea');
+      textarea.placeholder = 'Why does this work? What to look for next time…';
+      const saveHint = document.createElement('div');
+      saveHint.className = 'save-hint';
+      saveHint.textContent = 'Saves automatically when you click away.';
+      noteEditor.appendChild(textarea);
+      noteEditor.appendChild(saveHint);
+      fig.appendChild(noteEditor);
+
+      noteBtn.addEventListener('click', () => noteEditor.classList.toggle('open'));
+      textarea.addEventListener('blur', () => setNote(id, textarea.value));
+
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea };
+      grid.appendChild(fig);
+    });
+    container.appendChild(grid);
+  };
+
+  if (cat.subs) {
+    cat.subs.forEach(sub => {
+      const subEl = document.createElement('section');
+      subEl.className = 'sub';
+      subEl.id = `${cat.id}-${sub.id}`;
+      subEl.innerHTML = `<h3>${sub.title} <span class="count">${sub.images.length} images</span></h3>`;
+      renderImages(sub.images, sub.folder, sub.id, subEl);
+      catEl.appendChild(subEl);
+    });
+  } else {
+    const subEl = document.createElement('section');
+    subEl.className = 'sub';
+    renderImages(cat.images, cat.folder, null, subEl);
+    catEl.appendChild(subEl);
+  }
+
+  main.appendChild(catEl);
 });
 
+// ---------- Lightbox ----------
 const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightbox-img');
+const lightboxMedia = document.getElementById('lightbox-media');
 const lightboxCap = document.getElementById('lightbox-cap');
 
-function openLightbox(src, cap) {
-  lightboxImg.src = src;
+function openLightbox(src, cap, video) {
+  lightboxMedia.innerHTML = video
+    ? `<video src="${src}" controls autoplay loop></video>`
+    : `<img src="${src}" alt="">`;
   lightboxCap.textContent = cap;
   lightbox.classList.add('open');
 }
-lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lightbox) {
+    lightbox.classList.remove('open');
+    lightboxMedia.innerHTML = '';
+  }
+});
+document.querySelector('#lightbox .close').addEventListener('click', () => {
+  lightbox.classList.remove('open');
+  lightboxMedia.innerHTML = '';
+});
+
+// ---------- Ratings backend ----------
+function renderStars(id) {
+  const rec = ratings[id];
+  const stars = rec ? rec.stars : 0;
+  const { starsEl, noteBtn, textarea } = cardIndex[id];
+  [...starsEl.children].forEach((s, i) => {
+    s.classList.toggle('filled', i < stars);
+  });
+  if (rec && rec.note) {
+    noteBtn.classList.add('has-note');
+    textarea.value = rec.note;
+  } else {
+    noteBtn.classList.remove('has-note');
+  }
+}
+
+async function fetchRatings() {
+  try {
+    const res = await fetch(RATINGS_API);
+    ratings = await res.json();
+  } catch (e) {
+    console.warn('Could not load ratings', e);
+    ratings = {};
+  }
+  Object.keys(cardIndex).forEach(renderStars);
+  applyFilters();
+}
+
+async function postRating(id, stars, note) {
+  try {
+    await fetch(RATINGS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify({ imageId: id, stars, note })
+    });
+  } catch (e) {
+    console.warn('Could not save rating', e);
+  }
+}
+
+function setRating(id, stars) {
+  const current = ratings[id];
+  const newStars = current && current.stars === stars ? 0 : stars; // click same star again to clear
+  const note = current ? current.note : '';
+  ratings[id] = { stars: newStars, note, updatedAt: new Date().toISOString() };
+  renderStars(id);
+  postRating(id, newStars, note);
+  applyFilters();
+}
+
+function setNote(id, note) {
+  const current = ratings[id] || { stars: 0 };
+  ratings[id] = { stars: current.stars, note, updatedAt: new Date().toISOString() };
+  renderStars(id);
+  postRating(id, current.stars, note);
+}
+
+// ---------- Filter / sort ----------
+const searchInput = document.getElementById('search');
+const minRatingSelect = document.getElementById('minRating');
+const sortBySelect = document.getElementById('sortBy');
+
+function applyFilters() {
+  const q = searchInput.value.trim().toLowerCase();
+  const minRating = parseInt(minRatingSelect.value, 10);
+  const sortBy = sortBySelect.value;
+
+  Object.entries(cardIndex).forEach(([id, { cardEl }]) => {
+    const rec = ratings[id];
+    const stars = rec ? rec.stars : 0;
+    const note = (rec && rec.note ? rec.note : '').toLowerCase();
+    const caption = cardEl.dataset.caption;
+
+    const matchesSearch = !q || caption.includes(q) || note.includes(q);
+    const matchesRating = stars >= minRating;
+    cardEl.classList.toggle('hidden', !(matchesSearch && matchesRating));
+  });
+
+  if (sortBy !== 'default') {
+    document.querySelectorAll('.grid').forEach(grid => {
+      const cards = [...grid.children];
+      cards.sort((a, b) => {
+        const ra = (ratings[a.dataset.id] || {}).stars || 0;
+        const rb = (ratings[b.dataset.id] || {}).stars || 0;
+        if (sortBy === 'rating-desc') return rb - ra;
+        if (sortBy === 'rated-first') return (rb > 0) - (ra > 0);
+        return 0;
+      });
+      cards.forEach(c => grid.appendChild(c));
+    });
+  }
+}
+
+searchInput.addEventListener('input', applyFilters);
+minRatingSelect.addEventListener('change', applyFilters);
+sortBySelect.addEventListener('change', applyFilters);
+
+fetchRatings();
 </script>
 
 </body>
