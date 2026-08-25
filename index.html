@@ -696,8 +696,6 @@ function removeCard(id) {
 }
 
 async function deleteImage(id) {
-  const ok = confirm('Remove this image from the library? (Reversible via the API, but not from the page itself.)');
-  if (!ok) return;
   const current = ratings[id] || { stars: 0, note: '' };
   ratings[id] = { ...current, deleted: true };
   removeCard(id);
