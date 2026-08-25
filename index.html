@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference Library</title>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --panel: #17171a;
+    --border: #2a2a2e;
+    --text: #eaeaec;
+    --muted: #9a9aa0;
+    --accent: #7c9cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  header {
+    padding: 32px 40px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,14,16,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  nav a:hover { color: var(--text); border-color: var(--accent); }
+  main { padding: 8px 40px 80px; }
+  section { margin-top: 48px; scroll-margin-top: 140px; }
+  section h2 {
+    font-size: 18px;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  section h2 .count { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+  }
+  figure {
+    margin: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  figure:hover { border-color: var(--accent); }
+  figure img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+    background: #000;
+  }
+  figcaption {
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    flex-direction: column;
+    cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  #lightbox .cap {
+    color: var(--text);
+    margin-top: 16px;
+    max-width: 700px;
+    text-align: center;
+    font-size: 14px;
+    cursor: default;
+  }
+  #lightbox .close {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    color: var(--muted);
+    font-size: 28px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Reference Library</h1>
+  <p>Motion design reference, organized by theme — click any nav item to jump to a section.</p>
+  <nav id="nav"></nav>
+</header>
+
+<main id="main"></main>
+
+<div id="lightbox">
+  <span class="close">&times;</span>
+  <img id="lightbox-img" src="" alt="">
+  <div class="cap" id="lightbox-cap"></div>
+</div>
+
+<script>
+const SECTIONS = [
+  {
+    id: "cinematography-lighting",
+    emoji: "🔥",
+    title: "Cinematography & Lighting",
+    folder: "moody-volumetric-lighting",
+    images: [
+      { file: "moody-volumetric-lighting-001.jpg", caption: "Foggy street lamps casting orange-pink volumetric light cones over a road (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-002.jpg", caption: "Illuminated ruins glowing through dense fog with a visible light beam (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-003.jpg", caption: "Motion-blurred road at night with warm light bloom diffusing through fog (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-004.jpg", caption: "Car headlights cutting through purple fog in an open field at dusk (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-005.jpg", caption: "Foggy canal lined with trees, streetlights glowing warm against the mist (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-006.jpg", caption: "Tree-lined road tunnel with a single streetlight glowing through fog (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-007.jpg", caption: "Empty highway lined with sodium streetlights, dramatic fog haze (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-008.jpg", caption: "Minimal composition: a single light glowing red/pink through thick fog on a road (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-009.jpg", caption: "Industrial highway overpass at night, rows of streetlights diffused by fog (Pierre Putman)." },
+      { file: "moody-volumetric-lighting-010.jpg", caption: "Backlit figure in snow with dramatic radiating god-rays and long shadows (Mikko Lagerstedt)." }
+    ]
+  },
+  {
+    id: "color-grade",
+    emoji: "🎨",
+    title: "Color & Grade",
+    folder: "color-and-grade",
+    images: [
+      { file: "color-and-grade-001.jpg", caption: "Warm interior from 'Blue Curry' (GOBELINS) — magenta walls against orange sunlight, warm/cool complementary palette." },
+      { file: "color-and-grade-002.jpg", caption: "Night scene, same short: teal moonlight figure facing a glowing magenta-veined mango tree." },
+      { file: "color-and-grade-003.jpg", caption: "Abstract silhouetted dancers in overlapping translucent reds, oranges, and pinks." },
+      { file: "color-and-grade-004.jpg", caption: "Underwater plastic bags from 'The Beauty,' graded in a tight monochromatic teal for a cold, eerie mood." },
+      { file: "color-and-grade-005.jpg", caption: "Rusty toy robot with glowing green eyes against teal — classic teal/orange grade (Platige Image)." },
+      { file: "color-and-grade-006.png", caption: "Cyberpunk Japanese alley — red/pink foreground light against cyan shadows and signage." },
+      { file: "color-and-grade-007.jpg", caption: "Hooded character against a hot-pink gradient sky with teal-green mask accents." },
+      { file: "color-and-grade-008.jpg", caption: "Abstract 3D render, 'Heat' — glossy pink, coral, and pale-yellow forms on black." },
+      { file: "color-and-grade-009.jpg", caption: "Abstract textured render, 'Heat' — teal-grey surfaces streaked with green, orange, purple light." },
+      { file: "color-and-grade-010.jpg", caption: "Neon 3D render, 'Heat' — reflective grey form overlaid with electric pink, red, teal, lime streaks." }
+    ]
+  },
+  {
+    id: "motion-camera",
+    emoji: "🎬",
+    title: "Motion & Camera Movement",
+    folder: "motion-and-camera-movement",
+    images: [
+      { file: "motion-and-camera-movement-001.jpg", caption: "007 First Light title sequence — figure descending a colonnaded staircase, parallax depth (Territory)." },
+      { file: "motion-and-camera-movement-002.jpg", caption: "Starfleet Academy titles — camera flying through a glowing warp-tunnel corridor (Picturemill)." },
+      { file: "motion-and-camera-movement-003.jpg", caption: "Starfleet Academy titles — sweeping aerial establishing shot of a domed planetary colony." },
+      { file: "motion-and-camera-movement-004.jpg", caption: "Star Trek: Strange New Worlds S4 titles — starship banking low over an icy planet, tilted framing." },
+      { file: "motion-and-camera-movement-005.jpg", caption: "007 First Light titles — abstract eye/particle burst with strong dolly-zoom motion blur." },
+      { file: "motion-and-camera-movement-006.jpg", caption: "Google Cloud x Team USA reel — snowboarder mid-air with live skeletal-tracking overlay (Entropico)." },
+      { file: "motion-and-camera-movement-007.jpg", caption: "Logitech MX Master 4 brand film — dynamic diagonal product shot with rotational motion blur." },
+      { file: "motion-and-camera-movement-008.jpg", caption: "LUDENS x Kojima x Anicorn film — extreme close-up watch face with directional motion blur." },
+      { file: "motion-and-camera-movement-009.jpg", caption: "Aalo Atomic brand film — dynamic isometric aerial of a futuristic factory floor (Stylo Creative)." },
+      { file: "motion-and-camera-movement-010.jpg", caption: "Aalo Atomic brand film — low-angle dynamic shot through a robotic assembly structure." }
+    ]
+  },
+  {
+    id: "vfx-compositing",
+    emoji: "✨",
+    title: "VFX & Compositing",
+    folder: "vfx-and-compositing",
+    images: [
+      { file: "vfx-and-compositing-001.png", caption: "BTS: crew testing a practical particle/dust rig for Rings of Power S2's title sequence." },
+      { file: "vfx-and-compositing-002.png", caption: "BTS: hand-dropping powder onto a lit surface — a practical effects plate (Motionographer)." },
+      { file: "vfx-and-compositing-003.jpg", caption: "Full-CG eVTOL aircraft composited against a real Manhattan skyline (INK Studio for Joby Aviation)." },
+      { file: "vfx-and-compositing-004.jpg", caption: "Abstract CG close-up study of an aircraft's wing/nacelle surfaces and lighting (INK Studio)." },
+      { file: "vfx-and-compositing-005.jpg", caption: "Macro CG render of a transparent-case watch's internal mechanism (Tendril for Hublot)." },
+      { file: "vfx-and-compositing-006.jpg", caption: "CG humanoid robot composited into 'Sky Cry' music video (Mathematic)." },
+      { file: "vfx-and-compositing-007.jpg", caption: "Astronaut inside a CG spacecraft capsule — atmospheric sci-fi compositing ('Many Moons')." },
+      { file: "vfx-and-compositing-008.png", caption: "Photoreal CG creature close-up (INFECTED for Mercedes-Benz 'Follow')." },
+      { file: "vfx-and-compositing-009.jpg", caption: "Photoreal CG dinosaur composited into a live-action-style interior (Audi 'The Comeback')." },
+      { file: "vfx-and-compositing-010.jpg", caption: "CG particle/sphere simulation swirling in painterly liquid (Tendril for VIZIO)." }
+    ]
+  },
+  {
+    id: "typography-graphics",
+    emoji: "🔤",
+    title: "Typography & Graphics",
+    folder: "typography-and-graphics",
+    images: [
+      { file: "typography-and-graphics-001.jpg", caption: "3D-extruded kinetic type: 'I WILL FIGHT ANYBODY WHO SAYS I DON'T' (Jacob Gilbreath)." },
+      { file: "typography-and-graphics-002.jpg", caption: "3D type spelling 'For Making It All... NBC' with a script-lettering badge (Jacob Gilbreath)." },
+      { file: "typography-and-graphics-003.jpg", caption: "3D type blocks arranged around an illustrated vintage microphone (Jacob Gilbreath)." },
+      { file: "typography-and-graphics-004.jpg", caption: "'SIDE WAYS TYPOGRAPHIQUE' — angular black/cream sheared letterforms (Xtian Miller)." },
+      { file: "typography-and-graphics-005.jpg", caption: "'XTRA' poster — bold letters obscured by rough brush-stroke texture (Xtian Miller)." },
+      { file: "typography-and-graphics-006.jpg", caption: "Diagonal striped/chevron letterform pattern, Psalm 145:17 quote (Xtian Miller)." },
+      { file: "typography-and-graphics-007.jpg", caption: "'MAGNETISM' — bold type overlaid with radiating pink/orange contour lines (Xtian Miller)." },
+      { file: "typography-and-graphics-008.jpg", caption: "Pixel-glitch kinetic-type identity spread, 'Dynamic Branding' book." },
+      { file: "typography-and-graphics-009.gif", caption: "36 Days of Type — 'culture' spiraling into a radial kinetic-type pattern (Syddharth Mate)." },
+      { file: "typography-and-graphics-010.jpg", caption: "'GAME / EDGE / THE' — glitch cursor icons, green/blue on black (Flatwhite Motion, RED Hackathon)." }
+    ]
+  },
+  {
+    id: "ai-gen",
+    emoji: "🤖",
+    title: "AI-Gen Reference",
+    folder: "ai-gen-reference",
+    images: [
+      { file: "ai-gen-reference-001.jpg", caption: "Fish-headed man in a blue suit bursting through a yellow door — Magritte-style surrealism (Vuxten)." },
+      { file: "ai-gen-reference-002.jpg", caption: "Lone red-robed figure beneath floating red paper umbrellas (SAN0)." },
+      { file: "ai-gen-reference-003.jpg", caption: "Giant paintbrush laying a dashed road across blue pavement, tiny figure walking it (Blueeyes)." },
+      { file: "ai-gen-reference-004.jpg", caption: "A ghost in a bedsheet costume kneeling by a laundry line with an engagement ring (Joe_BakerAI)." },
+      { file: "ai-gen-reference-005.jpg", caption: "Giant kaiju head built from rubble looming over a war-torn city (conco641)." },
+      { file: "ai-gen-reference-006.jpg", caption: "Anthropomorphic cat boxer landing a kick on a T-rex in a packed arena (Cinnadust)." },
+      { file: "ai-gen-reference-007.jpg", caption: "Abstract mixed-media cat illustration against a Rothko/Mondrian-esque background (conco641)." },
+      { file: "ai-gen-reference-008.jpg", caption: "Painterly glowing blue bird on a cherry-blossom branch beside soap bubbles (peam3178)." },
+      { file: "ai-gen-reference-009.jpg", caption: "Ink-and-gold painting: white cat gazing through a circular window at a moonlit lake (Cinnadust)." },
+      { file: "ai-gen-reference-010.jpg", caption: "Watercolor-style illustration: woman in a boat setting glowing lotus lanterns adrift (koyan0418439)." }
+    ]
+  },
+  {
+    id: "inspiration-sites",
+    emoji: "🌐",
+    title: "Saved from Inspiration Sites",
+    folder: "inspiration-sites",
+    images: [
+      { file: "inspiration-sites-001.jpg", caption: "Flat-vector illustration of a couple riding a vintage open-top car (Colin Hesterly)." },
+      { file: "inspiration-sites-002.jpg", caption: "Glossy 3D illustration of a witch on a broomstick with a grinning moon and black cat (Morphine)." },
+      { file: "inspiration-sites-003.jpg", caption: "Moody abstract macro photograph of aircraft wing surfaces at dusk (Joby Aviation x INK Studio)." },
+      { file: "inspiration-sites-004.jpg", caption: "Environmental OOH billboard mockup, 'Nowhere to go but Up' (Joby Aviation)." },
+      { file: "inspiration-sites-005.jpg", caption: "Colorful 3D brand-film still with playful character heads and bold typography (MULTRA)." },
+      { file: "inspiration-sites-006.jpg", caption: "Warm-toned retro pixel-art character portrait with goggles (All in Pixel)." },
+      { file: "inspiration-sites-007.jpg", caption: "Large-scale generative-art installation, abstract sculptural color forms (Refik Anadol)." },
+      { file: "inspiration-sites-008.jpg", caption: "Cinematic title-sequence still with cast credit typography (AMC's Dark Winds, Elastic)." },
+      { file: "inspiration-sites-009.jpg", caption: "Smooth abstract 3D glass/liquid form in a red-blue gradient (George Stoyanov)." },
+      { file: "inspiration-sites-010.jpg", caption: "Whimsical 3D typography: an inflatable 'B' letterform rigged like a kite (Quastudio)." }
+    ]
+  }
+];
+
+const nav = document.getElementById('nav');
+const main = document.getElementById('main');
+
+SECTIONS.forEach(sec => {
+  const a = document.createElement('a');
+  a.href = `#${sec.id}`;
+  a.textContent = `${sec.emoji} ${sec.title}`;
+  nav.appendChild(a);
+
+  const section = document.createElement('section');
+  section.id = sec.id;
+  section.innerHTML = `<h2>${sec.emoji} ${sec.title} <span class="count">${sec.images.length} images</span></h2>`;
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  sec.images.forEach(img => {
+    const fig = document.createElement('figure');
+    const src = `images/${sec.folder}/${img.file}`;
+    fig.innerHTML = `<img src="${src}" loading="lazy" alt=""><figcaption>${img.caption}</figcaption>`;
+    fig.addEventListener('click', () => openLightbox(src, img.caption));
+    grid.appendChild(fig);
+  });
+  section.appendChild(grid);
+  main.appendChild(section);
+});
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxCap = document.getElementById('lightbox-cap');
+
+function openLightbox(src, cap) {
+  lightboxImg.src = src;
+  lightboxCap.textContent = cap;
+  lightbox.classList.add('open');
+}
+lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+</script>
+
+</body>
+</html>
