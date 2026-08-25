@@ -232,39 +232,26 @@
     cursor: pointer;
   }
 
-  .toolbar button#selectToggle {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 7px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .toolbar button#selectToggle.active {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-
   .thumb-wrap { position: relative; }
   .select-check {
-    display: none;
+    display: flex;
     position: absolute;
     top: 8px;
     left: 8px;
     width: 22px;
     height: 22px;
     border-radius: 5px;
-    border: 2px solid rgba(255,255,255,0.7);
-    background: rgba(0,0,0,0.35);
-    z-index: 2;
+    border: 2px solid rgba(255,255,255,0.85);
+    background: rgba(0,0,0,0.4);
+    z-index: 3;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-size: 13px;
     font-weight: bold;
+    cursor: pointer;
   }
-  body.select-mode .select-check { display: flex; }
+  .select-check:hover { border-color: var(--accent); }
   figure.card.selected {
     outline: 2px solid var(--accent);
     outline-offset: -2px;
@@ -272,6 +259,29 @@
   figure.card.selected .select-check {
     background: var(--accent);
     border-color: var(--accent);
+  }
+  .delete-x {
+    display: flex;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.4);
+    z-index: 3;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .delete-x:hover {
+    background: #c0392b;
+    border-color: #c0392b;
+    color: #fff;
   }
 
   #batchBar {
@@ -330,8 +340,8 @@
         <option value="rated-first">Rated first</option>
       </select>
     </label>
-    <button id="selectToggle">☐ Select multiple</button>
   </div>
+  <p style="margin:8px 0 0;color:var(--muted);font-size:11.5px;">Click an image to view it full-size. Click the checkbox in the corner to select multiple for batch rating.</p>
 </header>
 
 <main id="main"></main>
@@ -535,16 +545,21 @@ CATEGORIES.forEach(cat => {
       thumbWrap.innerHTML = isVideo(img.file)
         ? `<video src="${src}" muted loop playsinline></video>`
         : `<img src="${src}" loading="lazy" alt="">`;
+
       const checkEl = document.createElement('div');
       checkEl.className = 'select-check';
+      checkEl.title = 'Select for batch rating';
+      checkEl.addEventListener('click', (e) => { e.stopPropagation(); toggleSelect(id); });
       thumbWrap.appendChild(checkEl);
-      thumbWrap.addEventListener('click', () => {
-        if (selectMode) {
-          toggleSelect(id);
-        } else {
-          openLightbox(src, img.caption, isVideo(img.file));
-        }
-      });
+
+      const deleteEl = document.createElement('div');
+      deleteEl.className = 'delete-x';
+      deleteEl.textContent = '✕';
+      deleteEl.title = 'Remove from library';
+      deleteEl.addEventListener('click', (e) => { e.stopPropagation(); deleteImage(id); });
+      thumbWrap.appendChild(deleteEl);
+
+      thumbWrap.addEventListener('click', () => openLightbox(src, img.caption, isVideo(img.file)));
       if (isVideo(img.file)) {
         const v = thumbWrap.querySelector('video');
         thumbWrap.addEventListener('mouseenter', () => v.play());
@@ -661,8 +676,40 @@ async function fetchRatings() {
     console.warn('Could not load ratings', e);
     ratings = {};
   }
-  Object.keys(cardIndex).forEach(renderStars);
+  Object.keys(cardIndex).forEach(id => {
+    if (ratings[id] && ratings[id].deleted) {
+      removeCard(id);
+    } else {
+      renderStars(id);
+    }
+  });
   applyFilters();
+}
+
+function removeCard(id) {
+  const entry = cardIndex[id];
+  if (!entry) return;
+  entry.cardEl.remove();
+  delete cardIndex[id];
+  selected.delete(id);
+  updateBatchBar();
+}
+
+async function deleteImage(id) {
+  const ok = confirm('Remove this image from the library? (Reversible via the API, but not from the page itself.)');
+  if (!ok) return;
+  const current = ratings[id] || { stars: 0, note: '' };
+  ratings[id] = { ...current, deleted: true };
+  removeCard(id);
+  try {
+    await fetch(RATINGS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify({ imageId: id, stars: current.stars || 0, note: current.note || '', deleted: true })
+    });
+  } catch (e) {
+    console.warn('Could not persist deletion', e);
+  }
 }
 
 async function postRating(id, stars, note) {
@@ -735,16 +782,15 @@ minRatingSelect.addEventListener('change', applyFilters);
 sortBySelect.addEventListener('change', applyFilters);
 
 // ---------- Batch select & rate ----------
-let selectMode = false;
 let selected = new Set();
 
-const selectToggle = document.getElementById('selectToggle');
 const batchBar = document.getElementById('batchBar');
 const batchCount = document.getElementById('batchCount');
 const batchStars = document.getElementById('batchStars');
 const clearSelectionBtn = document.getElementById('clearSelection');
 
 function toggleSelect(id) {
+  if (!cardIndex[id]) return;
   if (selected.has(id)) {
     selected.delete(id);
   } else {
@@ -757,25 +803,19 @@ function toggleSelect(id) {
 
 function updateBatchBar() {
   batchCount.textContent = `${selected.size} selected`;
-  batchBar.classList.toggle('open', selectMode && selected.size > 0);
+  batchBar.classList.toggle('open', selected.size > 0);
 }
 
 function clearSelection() {
   selected.forEach(id => {
-    cardIndex[id].cardEl.classList.remove('selected');
-    cardIndex[id].checkEl.textContent = '';
+    if (cardIndex[id]) {
+      cardIndex[id].cardEl.classList.remove('selected');
+      cardIndex[id].checkEl.textContent = '';
+    }
   });
   selected.clear();
   updateBatchBar();
 }
-
-selectToggle.addEventListener('click', () => {
-  selectMode = !selectMode;
-  document.body.classList.toggle('select-mode', selectMode);
-  selectToggle.classList.toggle('active', selectMode);
-  selectToggle.textContent = selectMode ? '☑ Selecting…' : '☐ Select multiple';
-  if (!selectMode) clearSelection();
-});
 
 clearSelectionBtn.addEventListener('click', clearSelection);
 
