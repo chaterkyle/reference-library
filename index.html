@@ -231,6 +231,78 @@
     font-size: 28px;
     cursor: pointer;
   }
+
+  .toolbar button#selectToggle {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .toolbar button#selectToggle.active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .thumb-wrap { position: relative; }
+  .select-check {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 2px solid rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.35);
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  body.select-mode .select-check { display: flex; }
+  figure.card.selected {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  figure.card.selected .select-check {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  #batchBar {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    z-index: 50;
+    font-size: 13px;
+  }
+  #batchBar.open { display: flex; }
+  #batchBar .stars-batch { display: flex; gap: 4px; cursor: pointer; }
+  #batchBar .stars-batch span { font-size: 20px; color: var(--star-off); }
+  #batchBar .stars-batch span:hover, #batchBar .stars-batch span.hover { color: var(--star); }
+  #batchBar button.clear-sel {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -258,6 +330,7 @@
         <option value="rated-first">Rated first</option>
       </select>
     </label>
+    <button id="selectToggle">☐ Select multiple</button>
   </div>
 </header>
 
@@ -267,6 +340,15 @@
   <span class="close">&times;</span>
   <div id="lightbox-media"></div>
   <div class="cap" id="lightbox-cap"></div>
+</div>
+
+<div id="batchBar">
+  <span id="batchCount">0 selected</span>
+  <span>Rate all:</span>
+  <div class="stars-batch" id="batchStars">
+    <span data-value="1">★</span><span data-value="2">★</span><span data-value="3">★</span><span data-value="4">★</span><span data-value="5">★</span>
+  </div>
+  <button class="clear-sel" id="clearSelection">Clear</button>
 </div>
 
 <script>
@@ -453,7 +535,16 @@ CATEGORIES.forEach(cat => {
       thumbWrap.innerHTML = isVideo(img.file)
         ? `<video src="${src}" muted loop playsinline></video>`
         : `<img src="${src}" loading="lazy" alt="">`;
-      thumbWrap.addEventListener('click', () => openLightbox(src, img.caption, isVideo(img.file)));
+      const checkEl = document.createElement('div');
+      checkEl.className = 'select-check';
+      thumbWrap.appendChild(checkEl);
+      thumbWrap.addEventListener('click', () => {
+        if (selectMode) {
+          toggleSelect(id);
+        } else {
+          openLightbox(src, img.caption, isVideo(img.file));
+        }
+      });
       if (isVideo(img.file)) {
         const v = thumbWrap.querySelector('video');
         thumbWrap.addEventListener('mouseenter', () => v.play());
@@ -498,7 +589,7 @@ CATEGORIES.forEach(cat => {
       noteBtn.addEventListener('click', () => noteEditor.classList.toggle('open'));
       textarea.addEventListener('blur', () => setNote(id, textarea.value));
 
-      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea };
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl };
       grid.appendChild(fig);
     });
     container.appendChild(grid);
@@ -642,6 +733,65 @@ function applyFilters() {
 searchInput.addEventListener('input', applyFilters);
 minRatingSelect.addEventListener('change', applyFilters);
 sortBySelect.addEventListener('change', applyFilters);
+
+// ---------- Batch select & rate ----------
+let selectMode = false;
+let selected = new Set();
+
+const selectToggle = document.getElementById('selectToggle');
+const batchBar = document.getElementById('batchBar');
+const batchCount = document.getElementById('batchCount');
+const batchStars = document.getElementById('batchStars');
+const clearSelectionBtn = document.getElementById('clearSelection');
+
+function toggleSelect(id) {
+  if (selected.has(id)) {
+    selected.delete(id);
+  } else {
+    selected.add(id);
+  }
+  cardIndex[id].cardEl.classList.toggle('selected', selected.has(id));
+  cardIndex[id].checkEl.textContent = selected.has(id) ? '✓' : '';
+  updateBatchBar();
+}
+
+function updateBatchBar() {
+  batchCount.textContent = `${selected.size} selected`;
+  batchBar.classList.toggle('open', selectMode && selected.size > 0);
+}
+
+function clearSelection() {
+  selected.forEach(id => {
+    cardIndex[id].cardEl.classList.remove('selected');
+    cardIndex[id].checkEl.textContent = '';
+  });
+  selected.clear();
+  updateBatchBar();
+}
+
+selectToggle.addEventListener('click', () => {
+  selectMode = !selectMode;
+  document.body.classList.toggle('select-mode', selectMode);
+  selectToggle.classList.toggle('active', selectMode);
+  selectToggle.textContent = selectMode ? '☑ Selecting…' : '☐ Select multiple';
+  if (!selectMode) clearSelection();
+});
+
+clearSelectionBtn.addEventListener('click', clearSelection);
+
+[...batchStars.children].forEach(starEl => {
+  const val = parseInt(starEl.dataset.value, 10);
+  starEl.addEventListener('mouseenter', () => {
+    [...batchStars.children].forEach(s => s.classList.toggle('hover', parseInt(s.dataset.value, 10) <= val));
+  });
+  starEl.addEventListener('mouseleave', () => {
+    [...batchStars.children].forEach(s => s.classList.remove('hover'));
+  });
+  starEl.addEventListener('click', () => {
+    selected.forEach(id => setRating(id, val));
+    clearSelection();
+  });
+});
 
 fetchRatings();
 </script>
