@@ -7,6 +7,7 @@
 <style>
   :root {
     --bg: #0e0e10;
+    --canvas-bg: #131316;
     --panel: #17171a;
     --panel2: #1d1d21;
     --border: #2a2a2e;
@@ -33,7 +34,7 @@
     z-index: 20;
   }
   h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
-  header > p { margin: 0; color: var(--muted); font-size: 13px; }
+  header > p.tagline { margin: 0; color: var(--muted); font-size: 13px; }
 
   nav#catnav {
     display: flex;
@@ -83,6 +84,7 @@
     align-items: center;
     gap: 6px;
   }
+  .hint { margin: 8px 0 0; color: var(--muted); font-size: 11.5px; }
 
   main { padding: 8px 40px 100px; }
 
@@ -90,7 +92,7 @@
   .category > h2 {
     font-size: 20px;
     margin: 0;
-    scroll-margin-top: 190px;
+    scroll-margin-top: 220px;
   }
   .category > p.desc {
     margin: 4px 0 0;
@@ -98,152 +100,103 @@
     font-size: 12.5px;
   }
 
-  section.sub { margin-top: 26px; scroll-margin-top: 190px; }
-  section.sub h3 {
-    font-size: 15px;
-    margin: 0 0 4px;
+  .canvas-controls {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    color: var(--text);
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 8px;
   }
-  section.sub h3 .count { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .canvas-controls button {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .canvas-controls button:hover { color: var(--text); border-color: var(--accent); }
+  .canvas-controls .zoom-level { font-size: 12px; color: var(--muted); min-width: 42px; text-align: center; }
+
+  .canvas-viewport {
+    position: relative;
+    width: 100%;
+    height: 640px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background:
+      radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 24px 24px,
+      var(--canvas-bg);
+    cursor: grab;
+  }
+  .canvas-viewport.panning { cursor: grabbing; }
+  .canvas-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  .zone-label {
+    position: absolute;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .zone-label .zone-count { font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.7; }
 
   .empty-state {
-    margin-top: 10px;
+    position: absolute;
     padding: 18px 16px;
     border: 1px dashed var(--border);
     border-radius: 8px;
     color: var(--muted);
     font-size: 12.5px;
+    width: 260px;
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 14px;
-    margin-top: 14px;
-  }
   figure.card {
+    position: absolute;
     margin: 0;
+    width: 220px;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    cursor: grab;
+    user-select: none;
   }
-  figure.card.hidden { display: none; }
-  .thumb-wrap { cursor: pointer; }
+  figure.card.dragging {
+    cursor: grabbing;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+  .thumb-wrap { position: relative; pointer-events: none; }
   figure.card img, figure.card video {
     width: 100%;
-    height: 220px;
+    height: 180px;
     object-fit: cover;
     display: block;
     background: #000;
   }
   figcaption {
     padding: 10px 12px 4px;
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--muted);
     line-height: 1.4;
-    flex: 1;
+    pointer-events: none;
   }
 
-  .rating-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 12px 10px;
-    gap: 8px;
+  .select-check, .delete-x {
+    pointer-events: auto;
   }
-  .stars { display: flex; gap: 2px; cursor: pointer; }
-  .stars .star {
-    font-size: 16px;
-    color: var(--star-off);
-    line-height: 1;
-    user-select: none;
-  }
-  .stars .star.filled { color: var(--star); }
-  .note-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 11px;
-    border-radius: 5px;
-    padding: 3px 8px;
-    cursor: pointer;
-  }
-  .note-btn.has-note { color: var(--accent); border-color: var(--accent); }
-  .note-editor {
-    display: none;
-    padding: 0 12px 12px;
-  }
-  .note-editor.open { display: block; }
-  .note-editor textarea {
-    width: 100%;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 12px;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 50px;
-  }
-  .note-editor .save-hint {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-
-  select.move-select {
-    width: calc(100% - 24px);
-    margin: 0 12px 12px;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 11px;
-    padding: 5px 6px;
-    border-radius: 5px;
-  }
-
-  #lightbox {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.92);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-    flex-direction: column;
-  }
-  #lightbox.open { display: flex; }
-  #lightbox img, #lightbox video {
-    max-width: 100%;
-    max-height: 74vh;
-    object-fit: contain;
-    border-radius: 4px;
-  }
-  #lightbox .cap {
-    color: var(--text);
-    margin-top: 16px;
-    max-width: 700px;
-    text-align: center;
-    font-size: 14px;
-  }
-  #lightbox .close {
-    position: absolute;
-    top: 24px;
-    right: 32px;
-    color: var(--muted);
-    font-size: 28px;
-    cursor: pointer;
-  }
-
-  .thumb-wrap { position: relative; }
   .select-check {
     display: flex;
     position: absolute;
@@ -289,11 +242,75 @@
     line-height: 1;
     cursor: pointer;
   }
-  .delete-x:hover {
-    background: #c0392b;
-    border-color: #c0392b;
-    color: #fff;
+  .delete-x:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+  .rating-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px 8px;
+    gap: 8px;
+    pointer-events: auto;
   }
+  .stars { display: flex; gap: 2px; cursor: pointer; }
+  .stars .star { font-size: 15px; color: var(--star-off); line-height: 1; }
+  .stars .star.filled { color: var(--star); }
+  .note-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 10.5px;
+    border-radius: 5px;
+    padding: 3px 7px;
+    cursor: pointer;
+  }
+  .note-btn.has-note { color: var(--accent); border-color: var(--accent); }
+  .note-editor { display: none; padding: 0 12px 10px; pointer-events: auto; }
+  .note-editor.open { display: block; }
+  .note-editor textarea {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 7px;
+    font-size: 11.5px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 44px;
+  }
+  select.move-select {
+    width: calc(100% - 24px);
+    margin: 0 12px 12px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 10.5px;
+    padding: 5px 6px;
+    border-radius: 5px;
+    pointer-events: auto;
+  }
+
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    flex-direction: column;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img, #lightbox video {
+    max-width: 100%;
+    max-height: 74vh;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  #lightbox .cap { color: var(--text); margin-top: 16px; max-width: 700px; text-align: center; font-size: 14px; }
+  #lightbox .close { position: absolute; top: 24px; right: 32px; color: var(--muted); font-size: 28px; cursor: pointer; }
 
   #batchBar {
     display: none;
@@ -330,7 +347,7 @@
 
 <header>
   <h1>Reference Library</h1>
-  <p>Motion design reference, organized by category → style. Star what's useful, note why, filter later.</p>
+  <p class="tagline">Motion design reference, organized by category. Drag images to rearrange, scroll to zoom, drag empty space to pan.</p>
   <nav id="catnav"></nav>
   <div class="toolbar">
     <input type="text" id="search" placeholder="Search captions & notes…">
@@ -344,15 +361,8 @@
         <option value="5">★★★★★ 5</option>
       </select>
     </label>
-    <label>Sort
-      <select id="sortBy">
-        <option value="default">Default order</option>
-        <option value="rating-desc">Rating: high to low</option>
-        <option value="rated-first">Rated first</option>
-      </select>
-    </label>
   </div>
-  <p style="margin:8px 0 0;color:var(--muted);font-size:11.5px;">Click an image to view it full-size. Click the checkbox in the corner to select multiple for batch rating.</p>
+  <p class="hint">Filtering hides non-matching images without moving anything else. Each category below is its own pannable/zoomable canvas — positions are saved and sync across devices.</p>
 </header>
 
 <main id="main"></main>
@@ -375,6 +385,7 @@
 <script>
 const RATINGS_API = "https://reference-library-ratings.image-ref.workers.dev/ratings";
 const AUTH_KEY = "kyle-ref-lib-2026";
+const GRID_SNAP = 20; // px, world-space snapping grid while dragging
 
 // ---------- Content ----------
 const CATEGORIES = [
@@ -508,27 +519,57 @@ const CATEGORIES = [
   }
 ];
 
-// ---------- State ----------
-let ratings = {}; // imageId -> { stars, note, updatedAt }
-const cardIndex = {}; // imageId -> { cardEl, starsEl, noteBtn, noteEditor, noteTextarea }
-
-function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
-
-function imageId(catId, subId, file) {
-  return `${catId}__${subId || "_"}__${file}`;
-}
-
 // ---------- Move-to destination list ----------
 const DEST_OPTIONS = [];
 CATEGORIES.forEach(cat => {
   if (cat.subs) {
-    cat.subs.forEach(sub => {
-      DEST_OPTIONS.push({ value: `${cat.id}__${sub.id}`, label: `${cat.emoji} ${cat.title} › ${sub.title}` });
-    });
+    cat.subs.forEach(sub => DEST_OPTIONS.push({ value: `${cat.id}__${sub.id}`, label: `${cat.emoji} ${cat.title} › ${sub.title}` }));
   } else {
     DEST_OPTIONS.push({ value: `${cat.id}__` + "_", label: `${cat.emoji} ${cat.title}` });
   }
 });
+
+// ---------- State ----------
+let ratings = {}; // imageId -> { stars, note, deleted, movedTo, x, y }
+const cardIndex = {}; // imageId -> dom refs
+const canvasState = {}; // catId -> { panX, panY, zoom, viewportEl, worldEl }
+let selected = new Set();
+
+function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
+function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file}`; }
+function snap(v) { return Math.round(v / GRID_SNAP) * GRID_SNAP; }
+
+// ---------- Default cluster layout (used when an image has no saved x/y) ----------
+const CARD_W = 220, CARD_H = 280, COL_GAP = 20, ROW_GAP = 30, COLS = 5, CLUSTER_GAP = 60, LABEL_H = 30;
+
+function computeDefaultLayout(cat) {
+  // returns { positions: {imageId: {x,y}}, zones: [{label,x,y}], worldW, worldH }
+  const positions = {};
+  const zones = [];
+  let curY = 20;
+  let maxW = 20;
+  const groups = cat.subs || [{ id: null, title: null, folder: cat.folder, images: cat.images }];
+  groups.forEach(group => {
+    if (group.title) {
+      zones.push({ label: group.title, count: group.images.length, x: 20, y: curY });
+      curY += LABEL_H;
+    }
+    if (group.images.length === 0) {
+      positions[`__empty__${cat.id}__${group.id || "_"}`] = { x: 20, y: curY, empty: true, folder: group.folder, subId: group.id };
+      curY += 90 + CLUSTER_GAP;
+      return;
+    }
+    group.images.forEach((img, i) => {
+      const col = i % COLS, row = Math.floor(i / COLS);
+      const id = imageId(cat.id, group.id, img.file);
+      positions[id] = { x: 20 + col * (CARD_W + COL_GAP), y: curY + row * (CARD_H + ROW_GAP) };
+    });
+    const rows = Math.ceil(group.images.length / COLS);
+    curY += rows * (CARD_H + ROW_GAP) + CLUSTER_GAP;
+    maxW = Math.max(maxW, 20 + COLS * (CARD_W + COL_GAP));
+  });
+  return { positions, zones, worldW: maxW + 400, worldH: curY + 400 };
+}
 
 // ---------- Build DOM ----------
 const catnav = document.getElementById('catnav');
@@ -545,50 +586,84 @@ CATEGORIES.forEach(cat => {
   catEl.id = cat.id;
   catEl.innerHTML = `<h2>${cat.emoji} ${cat.title}</h2>` + (cat.desc ? `<p class="desc">${cat.desc}</p>` : '');
 
-  const renderImages = (images, folder, subId, container) => {
-    if (!images.length) {
+  const controls = document.createElement('div');
+  controls.className = 'canvas-controls';
+  controls.innerHTML = `
+    <button class="zoom-out">−</button>
+    <span class="zoom-level">100%</span>
+    <button class="zoom-in">+</button>
+    <button class="zoom-reset">Reset view</button>
+    <button class="auto-arrange">Auto-arrange by rating</button>
+  `;
+  catEl.appendChild(controls);
+
+  const viewport = document.createElement('div');
+  viewport.className = 'canvas-viewport';
+  const world = document.createElement('div');
+  world.className = 'canvas-world';
+  viewport.appendChild(world);
+  catEl.appendChild(viewport);
+
+  const layout = computeDefaultLayout(cat);
+  world.style.width = layout.worldW + 'px';
+  world.style.height = layout.worldH + 'px';
+
+  layout.zones.forEach(z => {
+    const el = document.createElement('div');
+    el.className = 'zone-label';
+    el.style.left = z.x + 'px';
+    el.style.top = z.y + 'px';
+    el.innerHTML = `${z.label} <span class="zone-count">${z.count} images</span>`;
+    world.appendChild(el);
+  });
+
+  const groups = cat.subs || [{ id: null, folder: cat.folder, images: cat.images }];
+  groups.forEach(group => {
+    if (group.images.length === 0) {
+      const key = `__empty__${cat.id}__${group.id || "_"}`;
+      const pos = layout.positions[key];
       const empty = document.createElement('div');
       empty.className = 'empty-state';
+      empty.style.left = pos.x + 'px';
+      empty.style.top = pos.y + 'px';
       empty.textContent = 'No images yet — pending sourcing.';
-      container.appendChild(empty);
+      world.appendChild(empty);
       return;
     }
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    images.forEach(img => {
-      const id = imageId(cat.id, subId, img.file);
-      const src = `images/${folder}/${img.file}`;
+    group.images.forEach(img => {
+      const id = imageId(cat.id, group.id, img.file);
+      const src = `images/${group.folder}/${img.file}`;
+      const pos = layout.positions[id];
+
       const fig = document.createElement('figure');
       fig.className = 'card';
       fig.dataset.id = id;
       fig.dataset.caption = img.caption.toLowerCase();
+      fig.dataset.cat = cat.id;
+      fig.style.left = pos.x + 'px';
+      fig.style.top = pos.y + 'px';
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'thumb-wrap';
       thumbWrap.innerHTML = isVideo(img.file)
         ? `<video src="${src}" muted loop playsinline></video>`
         : `<img src="${src}" loading="lazy" alt="">`;
+      fig.appendChild(thumbWrap);
 
       const checkEl = document.createElement('div');
       checkEl.className = 'select-check';
       checkEl.title = 'Select for batch rating';
+      checkEl.addEventListener('mousedown', (e) => e.stopPropagation());
       checkEl.addEventListener('click', (e) => { e.stopPropagation(); toggleSelect(id); });
-      thumbWrap.appendChild(checkEl);
+      fig.appendChild(checkEl);
 
       const deleteEl = document.createElement('div');
       deleteEl.className = 'delete-x';
       deleteEl.textContent = '✕';
       deleteEl.title = 'Remove from library';
+      deleteEl.addEventListener('mousedown', (e) => e.stopPropagation());
       deleteEl.addEventListener('click', (e) => { e.stopPropagation(); deleteImage(id); });
-      thumbWrap.appendChild(deleteEl);
-
-      thumbWrap.addEventListener('click', () => openLightbox(src, img.caption, isVideo(img.file)));
-      if (isVideo(img.file)) {
-        const v = thumbWrap.querySelector('video');
-        thumbWrap.addEventListener('mouseenter', () => v.play());
-        thumbWrap.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
-      }
-      fig.appendChild(thumbWrap);
+      fig.appendChild(deleteEl);
 
       const figcap = document.createElement('figcaption');
       figcap.textContent = img.caption;
@@ -596,72 +671,160 @@ CATEGORIES.forEach(cat => {
 
       const ratingRow = document.createElement('div');
       ratingRow.className = 'rating-row';
+      ratingRow.addEventListener('mousedown', (e) => e.stopPropagation());
       const starsEl = document.createElement('div');
       starsEl.className = 'stars';
       for (let i = 1; i <= 5; i++) {
         const s = document.createElement('span');
         s.className = 'star';
         s.textContent = '★';
-        s.dataset.value = i;
         s.addEventListener('click', () => setRating(id, i));
         starsEl.appendChild(s);
       }
       const noteBtn = document.createElement('button');
       noteBtn.className = 'note-btn';
       noteBtn.textContent = 'why?';
-
-      const moveSelect = document.createElement('select');
-      moveSelect.className = 'move-select';
-      moveSelect.innerHTML = `<option value="">Move to…</option>` + DEST_OPTIONS
-        .filter(d => d.value !== `${cat.id}__${subId || "_"}`)
-        .map(d => `<option value="${d.value}">${d.label}</option>`).join('');
-      moveSelect.addEventListener('change', () => {
-        if (moveSelect.value) moveImage(id, moveSelect.value);
-      });
-
       ratingRow.appendChild(starsEl);
       ratingRow.appendChild(noteBtn);
       fig.appendChild(ratingRow);
-      fig.appendChild(moveSelect);
 
       const noteEditor = document.createElement('div');
       noteEditor.className = 'note-editor';
+      noteEditor.addEventListener('mousedown', (e) => e.stopPropagation());
       const textarea = document.createElement('textarea');
       textarea.placeholder = 'Why does this work? What to look for next time…';
-      const saveHint = document.createElement('div');
-      saveHint.className = 'save-hint';
-      saveHint.textContent = 'Saves automatically when you click away.';
       noteEditor.appendChild(textarea);
-      noteEditor.appendChild(saveHint);
       fig.appendChild(noteEditor);
-
       noteBtn.addEventListener('click', () => noteEditor.classList.toggle('open'));
       textarea.addEventListener('blur', () => setNote(id, textarea.value));
 
-      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl };
-      grid.appendChild(fig);
-    });
-    container.appendChild(grid);
-  };
+      const moveSelect = document.createElement('select');
+      moveSelect.className = 'move-select';
+      moveSelect.addEventListener('mousedown', (e) => e.stopPropagation());
+      moveSelect.innerHTML = `<option value="">Move to…</option>` + DEST_OPTIONS
+        .filter(d => d.value !== `${cat.id}__${group.id || "_"}`)
+        .map(d => `<option value="${d.value}">${d.label}</option>`).join('');
+      moveSelect.addEventListener('change', () => { if (moveSelect.value) moveImage(id, moveSelect.value); });
+      fig.appendChild(moveSelect);
 
-  if (cat.subs) {
-    cat.subs.forEach(sub => {
-      const subEl = document.createElement('section');
-      subEl.className = 'sub';
-      subEl.id = `${cat.id}-${sub.id}`;
-      subEl.innerHTML = `<h3>${sub.title} <span class="count">${sub.images.length} images</span></h3>`;
-      renderImages(sub.images, sub.folder, sub.id, subEl);
-      catEl.appendChild(subEl);
+      world.appendChild(fig);
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, src, caption: img.caption, isVideo: isVideo(img.file) };
     });
-  } else {
-    const subEl = document.createElement('section');
-    subEl.className = 'sub';
-    renderImages(cat.images, cat.folder, null, subEl);
-    catEl.appendChild(subEl);
-  }
+  });
 
   main.appendChild(catEl);
+  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world };
+  initCanvasInteractions(cat.id, controls);
 });
+
+function applyTransform(catId) {
+  const st = canvasState[catId];
+  st.worldEl.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.zoom})`;
+  const zoomLabel = st.viewportEl.parentElement.querySelector('.zoom-level');
+  if (zoomLabel) zoomLabel.textContent = Math.round(st.zoom * 100) + '%';
+}
+
+// ---------- Canvas pan/zoom ----------
+function initCanvasInteractions(catId, controls) {
+  const st = canvasState[catId];
+  const vp = st.viewportEl;
+
+  let panning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
+
+  vp.addEventListener('mousedown', (e) => {
+    if (e.target.closest('figure.card')) return; // card drag handles itself
+    panning = true;
+    vp.classList.add('panning');
+    panStart = { x: e.clientX, y: e.clientY };
+    panOrigin = { x: st.panX, y: st.panY };
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!panning) return;
+    st.panX = panOrigin.x + (e.clientX - panStart.x);
+    st.panY = panOrigin.y + (e.clientY - panStart.y);
+    applyTransform(catId);
+  });
+  window.addEventListener('mouseup', () => { panning = false; vp.classList.remove('panning'); });
+
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = vp.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+    const worldX = (mouseX - st.panX) / st.zoom, worldY = (mouseY - st.panY) / st.zoom;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    st.zoom = Math.min(3, Math.max(0.3, st.zoom * factor));
+    st.panX = mouseX - worldX * st.zoom;
+    st.panY = mouseY - worldY * st.zoom;
+    applyTransform(catId);
+  }, { passive: false });
+
+  controls.querySelector('.zoom-in').addEventListener('click', () => {
+    st.zoom = Math.min(3, st.zoom * 1.2);
+    applyTransform(catId);
+  });
+  controls.querySelector('.zoom-out').addEventListener('click', () => {
+    st.zoom = Math.max(0.3, st.zoom / 1.2);
+    applyTransform(catId);
+  });
+  controls.querySelector('.zoom-reset').addEventListener('click', () => {
+    st.panX = 0; st.panY = 0; st.zoom = 1;
+    applyTransform(catId);
+  });
+  controls.querySelector('.auto-arrange').addEventListener('click', () => autoArrangeByRating(catId));
+
+  // Card dragging
+  let dragCard = null, dragStart = { x: 0, y: 0 }, cardStart = { x: 0, y: 0 }, moved = false;
+  vp.addEventListener('mousedown', (e) => {
+    const cardEl = e.target.closest('figure.card');
+    if (!cardEl) return;
+    if (e.target.closest('.select-check, .delete-x, .rating-row, .note-editor, .move-select')) return;
+    dragCard = cardEl;
+    moved = false;
+    dragStart = { x: e.clientX, y: e.clientY };
+    cardStart = { x: parseFloat(cardEl.style.left), y: parseFloat(cardEl.style.top) };
+    e.stopPropagation();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragCard) return;
+    const dx = (e.clientX - dragStart.x) / st.zoom;
+    const dy = (e.clientY - dragStart.y) / st.zoom;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      moved = true;
+      dragCard.classList.add('dragging');
+    }
+    if (moved) {
+      dragCard.style.left = snap(cardStart.x + dx) + 'px';
+      dragCard.style.top = snap(cardStart.y + dy) + 'px';
+    }
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (!dragCard) return;
+    const id = dragCard.dataset.id;
+    if (moved) {
+      dragCard.classList.remove('dragging');
+      const x = parseFloat(dragCard.style.left), y = parseFloat(dragCard.style.top);
+      persistPosition(id, x, y);
+    } else {
+      // treat as click -> open lightbox
+      const c = cardIndex[id];
+      if (c) openLightbox(c.src, c.caption, c.isVideo);
+    }
+    dragCard = null;
+  });
+}
+
+function autoArrangeByRating(catId) {
+  const cards = Object.entries(cardIndex).filter(([id, c]) => c.cardEl.dataset.cat === catId && !c.cardEl.classList.contains('hidden'));
+  cards.sort((a, b) => ((ratings[b[0]] || {}).stars || 0) - ((ratings[a[0]] || {}).stars || 0));
+  cards.forEach(([id, c], i) => {
+    const col = i % COLS, row = Math.floor(i / COLS);
+    const x = 20 + col * (CARD_W + COL_GAP);
+    const y = 20 + row * (CARD_H + ROW_GAP);
+    c.cardEl.style.left = x + 'px';
+    c.cardEl.style.top = y + 'px';
+    persistPosition(id, x, y);
+  });
+}
 
 // ---------- Lightbox ----------
 const lightbox = document.getElementById('lightbox');
@@ -669,21 +832,15 @@ const lightboxMedia = document.getElementById('lightbox-media');
 const lightboxCap = document.getElementById('lightbox-cap');
 
 function openLightbox(src, cap, video) {
-  lightboxMedia.innerHTML = video
-    ? `<video src="${src}" controls autoplay loop></video>`
-    : `<img src="${src}" alt="">`;
+  lightboxMedia.innerHTML = video ? `<video src="${src}" controls autoplay loop></video>` : `<img src="${src}" alt="">`;
   lightboxCap.textContent = cap;
   lightbox.classList.add('open');
 }
 lightbox.addEventListener('click', (e) => {
-  if (e.target === lightbox) {
-    lightbox.classList.remove('open');
-    lightboxMedia.innerHTML = '';
-  }
+  if (e.target === lightbox) { lightbox.classList.remove('open'); lightboxMedia.innerHTML = ''; }
 });
 document.querySelector('#lightbox .close').addEventListener('click', () => {
-  lightbox.classList.remove('open');
-  lightboxMedia.innerHTML = '';
+  lightbox.classList.remove('open'); lightboxMedia.innerHTML = '';
 });
 
 // ---------- Ratings backend ----------
@@ -691,15 +848,9 @@ function renderStars(id) {
   const rec = ratings[id];
   const stars = rec ? rec.stars : 0;
   const { starsEl, noteBtn, textarea } = cardIndex[id];
-  [...starsEl.children].forEach((s, i) => {
-    s.classList.toggle('filled', i < stars);
-  });
-  if (rec && rec.note) {
-    noteBtn.classList.add('has-note');
-    textarea.value = rec.note;
-  } else {
-    noteBtn.classList.remove('has-note');
-  }
+  [...starsEl.children].forEach((s, i) => s.classList.toggle('filled', i < stars));
+  if (rec && rec.note) { noteBtn.classList.add('has-note'); textarea.value = rec.note; }
+  else { noteBtn.classList.remove('has-note'); }
 }
 
 async function fetchRatings() {
@@ -711,13 +862,53 @@ async function fetchRatings() {
     ratings = {};
   }
   Object.keys(cardIndex).forEach(id => {
-    if (ratings[id] && (ratings[id].deleted || ratings[id].movedTo)) {
+    const rec = ratings[id];
+    if (rec && (rec.deleted || rec.movedTo)) {
       removeCard(id);
     } else {
       renderStars(id);
+      if (rec && typeof rec.x === 'number' && typeof rec.y === 'number') {
+        cardIndex[id].cardEl.style.left = rec.x + 'px';
+        cardIndex[id].cardEl.style.top = rec.y + 'px';
+      }
     }
   });
   applyFilters();
+}
+
+async function postRecord(id, extra) {
+  const current = ratings[id] || { stars: 0, note: '' };
+  const body = { imageId: id, stars: current.stars || 0, note: current.note || '', ...extra };
+  try {
+    await fetch(RATINGS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    console.warn('Could not save', e);
+  }
+}
+
+function setRating(id, stars) {
+  const current = ratings[id];
+  const newStars = current && current.stars === stars ? 0 : stars;
+  ratings[id] = { ...(current || {}), stars: newStars, updatedAt: new Date().toISOString() };
+  renderStars(id);
+  postRecord(id, { stars: newStars });
+  applyFilters();
+}
+
+function setNote(id, note) {
+  const current = ratings[id] || { stars: 0 };
+  ratings[id] = { ...current, note, updatedAt: new Date().toISOString() };
+  renderStars(id);
+  postRecord(id, { note });
+}
+
+function persistPosition(id, x, y) {
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), x, y };
+  postRecord(id, { x, y });
 }
 
 function removeCard(id) {
@@ -730,107 +921,39 @@ function removeCard(id) {
 }
 
 async function deleteImage(id) {
-  const current = ratings[id] || { stars: 0, note: '' };
-  ratings[id] = { ...current, deleted: true };
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), deleted: true };
   removeCard(id);
-  try {
-    await fetch(RATINGS_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
-      body: JSON.stringify({ imageId: id, stars: current.stars || 0, note: current.note || '', deleted: true })
-    });
-  } catch (e) {
-    console.warn('Could not persist deletion', e);
-  }
+  postRecord(id, { deleted: true });
 }
 
 async function moveImage(id, destValue) {
-  const current = ratings[id] || { stars: 0, note: '' };
-  ratings[id] = { ...current, movedTo: destValue };
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), movedTo: destValue };
   removeCard(id);
-  try {
-    await fetch(RATINGS_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
-      body: JSON.stringify({ imageId: id, stars: current.stars || 0, note: current.note || '', movedTo: destValue })
-    });
-  } catch (e) {
-    console.warn('Could not persist move', e);
-  }
+  postRecord(id, { movedTo: destValue });
 }
 
-async function postRating(id, stars, note) {
-  try {
-    await fetch(RATINGS_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
-      body: JSON.stringify({ imageId: id, stars, note })
-    });
-  } catch (e) {
-    console.warn('Could not save rating', e);
-  }
-}
-
-function setRating(id, stars) {
-  const current = ratings[id];
-  const newStars = current && current.stars === stars ? 0 : stars; // click same star again to clear
-  const note = current ? current.note : '';
-  ratings[id] = { stars: newStars, note, updatedAt: new Date().toISOString() };
-  renderStars(id);
-  postRating(id, newStars, note);
-  applyFilters();
-}
-
-function setNote(id, note) {
-  const current = ratings[id] || { stars: 0 };
-  ratings[id] = { stars: current.stars, note, updatedAt: new Date().toISOString() };
-  renderStars(id);
-  postRating(id, current.stars, note);
-}
-
-// ---------- Filter / sort ----------
+// ---------- Filter ----------
 const searchInput = document.getElementById('search');
 const minRatingSelect = document.getElementById('minRating');
-const sortBySelect = document.getElementById('sortBy');
 
 function applyFilters() {
   const q = searchInput.value.trim().toLowerCase();
   const minRating = parseInt(minRatingSelect.value, 10);
-  const sortBy = sortBySelect.value;
-
   Object.entries(cardIndex).forEach(([id, { cardEl }]) => {
     const rec = ratings[id];
     const stars = rec ? rec.stars : 0;
     const note = (rec && rec.note ? rec.note : '').toLowerCase();
     const caption = cardEl.dataset.caption;
-
     const matchesSearch = !q || caption.includes(q) || note.includes(q);
     const matchesRating = stars >= minRating;
     cardEl.classList.toggle('hidden', !(matchesSearch && matchesRating));
+    cardEl.style.display = (matchesSearch && matchesRating) ? '' : 'none';
   });
-
-  if (sortBy !== 'default') {
-    document.querySelectorAll('.grid').forEach(grid => {
-      const cards = [...grid.children];
-      cards.sort((a, b) => {
-        const ra = (ratings[a.dataset.id] || {}).stars || 0;
-        const rb = (ratings[b.dataset.id] || {}).stars || 0;
-        if (sortBy === 'rating-desc') return rb - ra;
-        if (sortBy === 'rated-first') return (rb > 0) - (ra > 0);
-        return 0;
-      });
-      cards.forEach(c => grid.appendChild(c));
-    });
-  }
 }
-
 searchInput.addEventListener('input', applyFilters);
 minRatingSelect.addEventListener('change', applyFilters);
-sortBySelect.addEventListener('change', applyFilters);
 
 // ---------- Batch select & rate ----------
-let selected = new Set();
-
 const batchBar = document.getElementById('batchBar');
 const batchCount = document.getElementById('batchCount');
 const batchStars = document.getElementById('batchStars');
@@ -838,46 +961,28 @@ const clearSelectionBtn = document.getElementById('clearSelection');
 
 function toggleSelect(id) {
   if (!cardIndex[id]) return;
-  if (selected.has(id)) {
-    selected.delete(id);
-  } else {
-    selected.add(id);
-  }
+  if (selected.has(id)) selected.delete(id); else selected.add(id);
   cardIndex[id].cardEl.classList.toggle('selected', selected.has(id));
   cardIndex[id].checkEl.textContent = selected.has(id) ? '✓' : '';
   updateBatchBar();
 }
-
 function updateBatchBar() {
   batchCount.textContent = `${selected.size} selected`;
   batchBar.classList.toggle('open', selected.size > 0);
 }
-
 function clearSelection() {
   selected.forEach(id => {
-    if (cardIndex[id]) {
-      cardIndex[id].cardEl.classList.remove('selected');
-      cardIndex[id].checkEl.textContent = '';
-    }
+    if (cardIndex[id]) { cardIndex[id].cardEl.classList.remove('selected'); cardIndex[id].checkEl.textContent = ''; }
   });
   selected.clear();
   updateBatchBar();
 }
-
 clearSelectionBtn.addEventListener('click', clearSelection);
-
 [...batchStars.children].forEach(starEl => {
   const val = parseInt(starEl.dataset.value, 10);
-  starEl.addEventListener('mouseenter', () => {
-    [...batchStars.children].forEach(s => s.classList.toggle('hover', parseInt(s.dataset.value, 10) <= val));
-  });
-  starEl.addEventListener('mouseleave', () => {
-    [...batchStars.children].forEach(s => s.classList.remove('hover'));
-  });
-  starEl.addEventListener('click', () => {
-    selected.forEach(id => setRating(id, val));
-    clearSelection();
-  });
+  starEl.addEventListener('mouseenter', () => [...batchStars.children].forEach(s => s.classList.toggle('hover', parseInt(s.dataset.value, 10) <= val)));
+  starEl.addEventListener('mouseleave', () => [...batchStars.children].forEach(s => s.classList.remove('hover')));
+  starEl.addEventListener('click', () => { selected.forEach(id => setRating(id, val)); clearSelection(); });
 });
 
 fetchRatings();
