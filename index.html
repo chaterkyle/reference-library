@@ -198,6 +198,17 @@
     margin-top: 4px;
   }
 
+  select.move-select {
+    width: calc(100% - 24px);
+    margin: 0 12px 12px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 5px 6px;
+    border-radius: 5px;
+  }
+
   #lightbox {
     display: none;
     position: fixed;
@@ -507,6 +518,18 @@ function imageId(catId, subId, file) {
   return `${catId}__${subId || "_"}__${file}`;
 }
 
+// ---------- Move-to destination list ----------
+const DEST_OPTIONS = [];
+CATEGORIES.forEach(cat => {
+  if (cat.subs) {
+    cat.subs.forEach(sub => {
+      DEST_OPTIONS.push({ value: `${cat.id}__${sub.id}`, label: `${cat.emoji} ${cat.title} › ${sub.title}` });
+    });
+  } else {
+    DEST_OPTIONS.push({ value: `${cat.id}__` + "_", label: `${cat.emoji} ${cat.title}` });
+  }
+});
+
 // ---------- Build DOM ----------
 const catnav = document.getElementById('catnav');
 const main = document.getElementById('main');
@@ -586,9 +609,20 @@ CATEGORIES.forEach(cat => {
       const noteBtn = document.createElement('button');
       noteBtn.className = 'note-btn';
       noteBtn.textContent = 'why?';
+
+      const moveSelect = document.createElement('select');
+      moveSelect.className = 'move-select';
+      moveSelect.innerHTML = `<option value="">Move to…</option>` + DEST_OPTIONS
+        .filter(d => d.value !== `${cat.id}__${subId || "_"}`)
+        .map(d => `<option value="${d.value}">${d.label}</option>`).join('');
+      moveSelect.addEventListener('change', () => {
+        if (moveSelect.value) moveImage(id, moveSelect.value);
+      });
+
       ratingRow.appendChild(starsEl);
       ratingRow.appendChild(noteBtn);
       fig.appendChild(ratingRow);
+      fig.appendChild(moveSelect);
 
       const noteEditor = document.createElement('div');
       noteEditor.className = 'note-editor';
@@ -677,7 +711,7 @@ async function fetchRatings() {
     ratings = {};
   }
   Object.keys(cardIndex).forEach(id => {
-    if (ratings[id] && ratings[id].deleted) {
+    if (ratings[id] && (ratings[id].deleted || ratings[id].movedTo)) {
       removeCard(id);
     } else {
       renderStars(id);
@@ -707,6 +741,21 @@ async function deleteImage(id) {
     });
   } catch (e) {
     console.warn('Could not persist deletion', e);
+  }
+}
+
+async function moveImage(id, destValue) {
+  const current = ratings[id] || { stars: 0, note: '' };
+  ratings[id] = { ...current, movedTo: destValue };
+  removeCard(id);
+  try {
+    await fetch(RATINGS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify({ imageId: id, stars: current.stars || 0, note: current.note || '', movedTo: destValue })
+    });
+  } catch (e) {
+    console.warn('Could not persist move', e);
   }
 }
 
