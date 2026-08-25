@@ -88,7 +88,40 @@
 
   main { padding: 8px 40px 100px; }
 
-  .category { margin-top: 44px; }
+  #home { margin-top: 32px; }
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .category-tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .category-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .category-tile .emoji { font-size: 28px; }
+  .category-tile h3 { margin: 10px 0 2px; font-size: 16px; }
+  .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .category-tile .tile-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 0; }
+
+  .back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .back-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .category { margin-top: 12px; display: none; }
+  .category.active { display: block; }
   .category > h2 {
     font-size: 20px;
     margin: 0;
@@ -349,7 +382,7 @@
   <h1>Reference Library</h1>
   <p class="tagline">Motion design reference, organized by category. Drag images to rearrange, scroll to zoom, drag empty space to pan.</p>
   <nav id="catnav"></nav>
-  <div class="toolbar">
+  <div class="toolbar" id="toolbar" style="display:none;">
     <input type="text" id="search" placeholder="Search captions & notes…">
     <label>Min rating
       <select id="minRating">
@@ -362,10 +395,15 @@
       </select>
     </label>
   </div>
-  <p class="hint">Filtering hides non-matching images without moving anything else. Each category below is its own pannable/zoomable canvas — positions are saved and sync across devices.</p>
+  <p class="hint" id="hint" style="display:none;">Filtering hides non-matching images without moving anything else. Drag to rearrange, scroll to zoom, drag empty space to pan — positions sync across devices.</p>
 </header>
 
-<main id="main"></main>
+<main>
+  <div id="home">
+    <div class="tile-grid" id="tileGrid"></div>
+  </div>
+  <div id="categoriesWrap"></div>
+</main>
 
 <div id="lightbox">
   <span class="close">&times;</span>
@@ -573,18 +611,43 @@ function computeDefaultLayout(cat) {
 
 // ---------- Build DOM ----------
 const catnav = document.getElementById('catnav');
-const main = document.getElementById('main');
+const categoriesWrap = document.getElementById('categoriesWrap');
+const tileGrid = document.getElementById('tileGrid');
+
+function totalImageCount(cat) {
+  if (cat.subs) return cat.subs.reduce((sum, s) => sum + s.images.length, 0);
+  return cat.images.length;
+}
 
 CATEGORIES.forEach(cat => {
   const a = document.createElement('a');
   a.href = `#${cat.id}`;
   a.textContent = `${cat.emoji} ${cat.title}`;
+  a.addEventListener('click', (e) => { e.preventDefault(); showCategory(cat.id); });
   catnav.appendChild(a);
+
+  const tile = document.createElement('div');
+  tile.className = 'category-tile';
+  tile.innerHTML = `
+    <div class="emoji">${cat.emoji}</div>
+    <h3>${cat.title}</h3>
+    <p class="tile-count">${totalImageCount(cat)} images</p>
+    <p class="tile-desc">${cat.desc || ''}</p>
+  `;
+  tile.addEventListener('click', () => showCategory(cat.id));
+  tileGrid.appendChild(tile);
 
   const catEl = document.createElement('div');
   catEl.className = 'category';
   catEl.id = cat.id;
-  catEl.innerHTML = `<h2>${cat.emoji} ${cat.title}</h2>` + (cat.desc ? `<p class="desc">${cat.desc}</p>` : '');
+  const backBtn = document.createElement('button');
+  backBtn.className = 'back-btn';
+  backBtn.textContent = '← All categories';
+  backBtn.addEventListener('click', showHome);
+  catEl.appendChild(backBtn);
+  const headerBlock = document.createElement('div');
+  headerBlock.innerHTML = `<h2>${cat.emoji} ${cat.title}</h2>` + (cat.desc ? `<p class="desc">${cat.desc}</p>` : '');
+  catEl.appendChild(headerBlock);
 
   const controls = document.createElement('div');
   controls.className = 'canvas-controls';
@@ -593,7 +656,7 @@ CATEGORIES.forEach(cat => {
     <span class="zoom-level">100%</span>
     <button class="zoom-in">+</button>
     <button class="zoom-reset">Reset view</button>
-    <button class="auto-arrange">Auto-arrange by rating</button>
+    <button class="organize">Organize</button>
   `;
   catEl.appendChild(controls);
 
@@ -712,10 +775,31 @@ CATEGORIES.forEach(cat => {
     });
   });
 
-  main.appendChild(catEl);
+  categoriesWrap.appendChild(catEl);
   canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world };
   initCanvasInteractions(cat.id, controls);
 });
+
+// ---------- Home / category navigation ----------
+function showHome() {
+  document.getElementById('home').style.display = 'block';
+  document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('hint').style.display = 'none';
+  history.replaceState(null, '', '#');
+}
+function showCategory(id) {
+  document.getElementById('home').style.display = 'none';
+  document.querySelectorAll('.category').forEach(el => el.classList.toggle('active', el.id === id));
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('hint').style.display = 'block';
+  history.replaceState(null, '', `#${id}`);
+}
+if (location.hash && document.getElementById(location.hash.slice(1))) {
+  showCategory(location.hash.slice(1));
+} else {
+  showHome();
+}
 
 function applyTransform(catId) {
   const st = canvasState[catId];
@@ -770,7 +854,7 @@ function initCanvasInteractions(catId, controls) {
     st.panX = 0; st.panY = 0; st.zoom = 1;
     applyTransform(catId);
   });
-  controls.querySelector('.auto-arrange').addEventListener('click', () => autoArrangeByRating(catId));
+  controls.querySelector('.organize').addEventListener('click', () => organize(catId));
 
   // Card dragging
   let dragCard = null, dragStart = { x: 0, y: 0 }, cardStart = { x: 0, y: 0 }, moved = false;
@@ -813,16 +897,53 @@ function initCanvasInteractions(catId, controls) {
   });
 }
 
-function autoArrangeByRating(catId) {
-  const cards = Object.entries(cardIndex).filter(([id, c]) => c.cardEl.dataset.cat === catId && !c.cardEl.classList.contains('hidden'));
-  cards.sort((a, b) => ((ratings[b[0]] || {}).stars || 0) - ((ratings[a[0]] || {}).stars || 0));
-  cards.forEach(([id, c], i) => {
-    const col = i % COLS, row = Math.floor(i / COLS);
-    const x = 20 + col * (CARD_W + COL_GAP);
-    const y = 20 + row * (CARD_H + ROW_GAP);
-    c.cardEl.style.left = x + 'px';
-    c.cardEl.style.top = y + 'px';
-    persistPosition(id, x, y);
+function findNearestFreeCell(desiredCol, desiredRow, occupied) {
+  if (!occupied.has(`${desiredCol},${desiredRow}`) && desiredCol >= 0 && desiredRow >= 0) {
+    return [desiredCol, desiredRow];
+  }
+  for (let radius = 1; radius < 200; radius++) {
+    for (let dc = -radius; dc <= radius; dc++) {
+      for (let dr = -radius; dr <= radius; dr++) {
+        if (Math.max(Math.abs(dc), Math.abs(dr)) !== radius) continue; // only the ring at this radius
+        const col = desiredCol + dc, row = desiredRow + dr;
+        if (col < 0 || row < 0) continue;
+        const key = `${col},${row}`;
+        if (!occupied.has(key)) return [col, row];
+      }
+    }
+  }
+  return [desiredCol, desiredRow]; // fallback, shouldn't happen
+}
+
+// "Organize": snap each visible card into the nearest clean grid cell to its CURRENT
+// position — cleans up spacing/alignment without reordering by any other criteria.
+function organize(catId) {
+  const cellW = CARD_W + COL_GAP, cellH = CARD_H + ROW_GAP;
+  const cards = Object.entries(cardIndex).filter(([id, c]) => c.cardEl.dataset.cat === catId && c.cardEl.style.display !== 'none');
+  if (!cards.length) return;
+
+  const originX = Math.min(...cards.map(([, c]) => parseFloat(c.cardEl.style.left)));
+  const originY = Math.min(...cards.map(([, c]) => parseFloat(c.cardEl.style.top)));
+
+  const withCells = cards.map(([id, c]) => {
+    const x = parseFloat(c.cardEl.style.left), y = parseFloat(c.cardEl.style.top);
+    return {
+      id, c,
+      idealCol: Math.max(0, Math.round((x - originX) / cellW)),
+      idealRow: Math.max(0, Math.round((y - originY) / cellH)),
+    };
+  });
+  // Process in reading order so collisions resolve predictably (top-left first).
+  withCells.sort((a, b) => a.idealRow - b.idealRow || a.idealCol - b.idealCol);
+
+  const occupied = new Set();
+  withCells.forEach(item => {
+    const [col, row] = findNearestFreeCell(item.idealCol, item.idealRow, occupied);
+    occupied.add(`${col},${row}`);
+    const x = originX + col * cellW, y = originY + row * cellH;
+    item.c.cardEl.style.left = x + 'px';
+    item.c.cardEl.style.top = y + 'px';
+    persistPosition(item.id, x, y);
   });
 }
 
