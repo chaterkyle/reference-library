@@ -628,6 +628,7 @@ CATEGORIES.forEach(cat => {
 
   const tile = document.createElement('div');
   tile.className = 'category-tile';
+  tile.dataset.cat = cat.id;
   tile.innerHTML = `
     <div class="emoji">${cat.emoji}</div>
     <h3>${cat.title}</h3>
@@ -995,6 +996,15 @@ async function fetchRatings() {
     }
   });
   applyFilters();
+  updateTileCounts();
+}
+
+function updateTileCounts() {
+  CATEGORIES.forEach(cat => {
+    const remaining = Object.values(cardIndex).filter(c => c.cardEl.dataset.cat === cat.id).length;
+    const tile = document.querySelector(`.category-tile[data-cat="${cat.id}"] .tile-count`);
+    if (tile) tile.textContent = `${remaining} images`;
+  });
 }
 
 async function postRecord(id, extra) {
@@ -1039,6 +1049,7 @@ function removeCard(id) {
   delete cardIndex[id];
   selected.delete(id);
   updateBatchBar();
+  updateTileCounts();
 }
 
 async function deleteImage(id) {
