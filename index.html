@@ -166,8 +166,9 @@
     background:
       radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 24px 24px,
       var(--canvas-bg);
-    cursor: grab;
+    cursor: default;
   }
+  body.space-pan-mode .canvas-viewport { cursor: grab; }
   .canvas-viewport.panning { cursor: grabbing; }
   .canvas-world {
     position: absolute;
@@ -404,16 +405,133 @@
     resize: vertical;
     min-height: 44px;
   }
-  select.move-select {
-    width: calc(100% - 24px);
-    margin: 0 12px 12px;
+  .context-menu {
+    display: none;
+    position: fixed;
+    z-index: 60;
     background: var(--panel2);
     border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 10.5px;
-    padding: 5px 6px;
+    border-radius: 8px;
+    padding: 4px;
+    min-width: 190px;
+    max-height: 60vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    font-size: 12.5px;
+  }
+  .context-menu.open { display: block; }
+  .context-menu .cm-item {
+    padding: 7px 10px;
     border-radius: 5px;
+    cursor: pointer;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .context-menu .cm-item:hover { background: var(--accent); color: #0e0e10; }
+  .context-menu .cm-item.danger:hover { background: #c0392b; color: #fff; }
+  .context-menu .cm-heading {
+    padding: 6px 10px 4px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  .context-menu .cm-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+
+  .group-popup {
+    display: none;
+    position: fixed;
+    z-index: 60;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    width: 240px;
+  }
+  .group-popup.open { display: block; }
+  .group-popup-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .group-popup-row:last-child { margin-bottom: 0; }
+  .group-popup input[type="text"] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .group-popup .preset {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .group-popup .preset.active { border-color: var(--text); }
+  .group-popup input[type="color"] {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+  }
+  .group-popup button {
+    background: var(--accent);
+    border: none;
+    color: #0e0e10;
+    font-weight: 600;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    flex: 1;
+  }
+  .group-popup button.ghost { background: none; border: 1px solid var(--border); color: var(--muted); font-weight: 400; flex: none; }
+
+  .group-box {
+    position: absolute;
+    border-radius: 14px;
+    pointer-events: none;
+  }
+  .group-titlebar {
+    position: absolute;
+    top: -30px;
+    left: -1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     pointer-events: auto;
+    cursor: grab;
+  }
+  .group-titlebar.dragging { cursor: grabbing; }
+  .group-title {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    outline: none;
+    max-width: 260px;
+  }
+  .group-toolbar {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+  }
+  .group-titlebar:hover .group-toolbar, .group-toolbar.open { display: flex; }
+  .group-toolbar .swatch {
+    width: 15px; height: 15px; border-radius: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
+  }
+  .group-toolbar .del {
+    width: 15px; height: 15px; border-radius: 4px; cursor: pointer;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-size: 10px; line-height: 1; display: flex; align-items: center; justify-content: center;
   }
 
   #lightbox {
@@ -497,21 +615,23 @@
   <div class="ft-divider"></div>
   <div class="ft-group">
     <input type="text" id="search" placeholder="Search…">
-    <select id="minRating">
-      <option value="0">Any ★</option>
-      <option value="1">★1+</option>
-      <option value="2">★2+</option>
-      <option value="3">★3+</option>
-      <option value="4">★4+</option>
-      <option value="5">★5</option>
-    </select>
   </div>
   <div class="ft-divider"></div>
-  <div class="ft-group">
-    <button id="ft-export" title="Export selected images">⬇ Export</button>
+  <button class="ft-icon-btn" id="ft-help" title="Drag empty space to box-select · Hold Space+drag to pan · Ctrl/Cmd+scroll (or pinch) to zoom, plain scroll pans · Alt+drag a card onto Finder to save it · Right-click a card for more options · Click empty space to deselect · Hotkeys: Delete, Esc, Cmd/Ctrl+A, T, +/-, Shift+0">?</button>
+</div>
+
+<div class="context-menu" id="contextMenu"></div>
+
+<div class="group-popup" id="groupPopup">
+  <div class="group-popup-row">
+    <input type="text" id="groupTitleInput" placeholder="Group title…" maxlength="60">
   </div>
-  <div class="ft-divider"></div>
-  <button class="ft-icon-btn" id="ft-help" title="Drag empty space to pan · Shift+drag to box-select · Ctrl/Cmd+scroll (or pinch) to zoom, plain scroll pans · Alt+drag a card onto Finder to save it · Hover a card and click ⬇ to download it">?</button>
+  <div class="group-popup-row" id="groupColorPresets"></div>
+  <div class="group-popup-row">
+    <input type="color" id="groupColorCustom" value="#7c9cff">
+    <button id="groupCreateBtn">Create group</button>
+    <button id="groupSkipBtn" class="ghost">Skip</button>
+  </div>
 </div>
 
 <div id="lightbox">
@@ -688,14 +808,18 @@ CATEGORIES.forEach(cat => {
 });
 
 // ---------- State ----------
-let ratings = {}; // imageId -> { stars, note, deleted, movedTo, pendingNewCategory, x, y }
+let ratings = {}; // imageId -> { stars, note, deleted, movedTo, pendingNewCategory, x, y, w }
 let annotations = {}; // annotationId -> { catId, text, color, x, y, deleted }
+let groups = {}; // groupId -> { catId, title, color, x, y, w, h, deleted }
 const cardIndex = {}; // imageId -> dom refs
 const annotationIndex = {}; // annotationId -> { el, toolbarEl }
+const groupIndex = {}; // groupId -> { el, titleEl }
 const canvasState = {}; // catId -> { panX, panY, zoom, viewportEl, worldEl }
 let selected = new Set();
 const ANNOTATION_COLORS = ["#eaeaec", "#f5c542", "#7c9cff", "#e06b6b", "#6bd48a", "#c77dff"];
+const GROUP_COLOR_PRESETS = ["#7c9cff", "#f5c542", "#e06b6b", "#6bd48a", "#c77dff", "#4fd1c5"];
 const ANNOTATIONS_API = "https://reference-library-ratings.image-ref.workers.dev/annotations";
+const GROUPS_API = "https://reference-library-ratings.image-ref.workers.dev/groups";
 
 function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
 function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file}`; }
@@ -906,14 +1030,10 @@ CATEGORIES.forEach(cat => {
       noteBtn.addEventListener('click', () => noteEditor.classList.toggle('open'));
       textarea.addEventListener('blur', () => setNote(id, textarea.value));
 
-      const moveSelect = document.createElement('select');
-      moveSelect.className = 'move-select';
-      moveSelect.addEventListener('mousedown', (e) => e.stopPropagation());
-      moveSelect.innerHTML = `<option value="">Move to…</option>` + DEST_OPTIONS
-        .filter(d => d.value !== `${cat.id}__${group.id || "_"}`)
-        .map(d => `<option value="${d.value}">${d.label}</option>`).join('');
-      moveSelect.addEventListener('change', () => { if (moveSelect.value) moveImage(id, moveSelect.value); });
-      fig.appendChild(moveSelect);
+      fig.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        openCardContextMenu(e.clientX, e.clientY, id, cat.id, group.id);
+      });
 
       world.appendChild(fig);
       cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, src, caption: img.caption, isVideo: isVideo(img.file) };
@@ -964,7 +1084,7 @@ function initCanvasInteractions(catId) {
   const vp = st.viewportEl;
 
   let panning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
-  let marquee = null, marqueeStart = { x: 0, y: 0 };
+  let marquee = null, marqueeStart = { x: 0, y: 0 }, marqueeMoved = false;
 
   function worldPointFromEvent(e) {
     const rect = vp.getBoundingClientRect();
@@ -973,7 +1093,8 @@ function initCanvasInteractions(catId) {
   }
 
   vp.addEventListener('mousedown', (e) => {
-    if (e.target.closest('figure.card, .annotation-wrap')) return; // handled by drag logic below
+    if (e.button !== 0) return;
+    if (e.target.closest('figure.card, .annotation-wrap, .group-titlebar')) return; // handled by drag logic below
 
     if (st.placingText) {
       const wp = worldPointFromEvent(e);
@@ -983,25 +1104,27 @@ function initCanvasInteractions(catId) {
       return;
     }
 
-    if (e.shiftKey) {
-      // Start rectangle marquee select
-      const rect = vp.getBoundingClientRect();
-      marqueeStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      marquee = document.createElement('div');
-      marquee.style.position = 'absolute';
-      marquee.style.border = '1px dashed var(--accent)';
-      marquee.style.background = 'rgba(124,156,255,0.1)';
-      marquee.style.zIndex = '5';
-      marquee.style.left = marqueeStart.x + 'px';
-      marquee.style.top = marqueeStart.y + 'px';
-      vp.appendChild(marquee);
+    if (spaceHeld) {
+      panning = true;
+      vp.classList.add('panning');
+      panStart = { x: e.clientX, y: e.clientY };
+      panOrigin = { x: st.panX, y: st.panY };
       return;
     }
 
-    panning = true;
-    vp.classList.add('panning');
-    panStart = { x: e.clientX, y: e.clientY };
-    panOrigin = { x: st.panX, y: st.panY };
+    // Plain drag on empty canvas = box-select (no shift needed); a plain click
+    // (no movement) deselects everything, since there's nothing under a 0px marquee.
+    marqueeMoved = false;
+    const rect = vp.getBoundingClientRect();
+    marqueeStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    marquee = document.createElement('div');
+    marquee.style.position = 'absolute';
+    marquee.style.border = '1px dashed var(--accent)';
+    marquee.style.background = 'rgba(124,156,255,0.1)';
+    marquee.style.zIndex = '5';
+    marquee.style.left = marqueeStart.x + 'px';
+    marquee.style.top = marqueeStart.y + 'px';
+    vp.appendChild(marquee);
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -1010,6 +1133,7 @@ function initCanvasInteractions(catId) {
       const curX = e.clientX - rect.left, curY = e.clientY - rect.top;
       const left = Math.min(curX, marqueeStart.x), top = Math.min(curY, marqueeStart.y);
       const w = Math.abs(curX - marqueeStart.x), h = Math.abs(curY - marqueeStart.y);
+      if (w > 3 || h > 3) marqueeMoved = true;
       Object.assign(marquee.style, { left: left + 'px', top: top + 'px', width: w + 'px', height: h + 'px' });
       return;
     }
@@ -1019,15 +1143,26 @@ function initCanvasInteractions(catId) {
     applyTransform(catId);
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', (e) => {
     if (marquee) {
       const mRect = marquee.getBoundingClientRect();
-      Object.entries(cardIndex).forEach(([id, c]) => {
-        if (c.cardEl.dataset.cat !== catId || c.cardEl.style.display === 'none') return;
-        const cRect = c.cardEl.getBoundingClientRect();
-        const intersects = !(cRect.right < mRect.left || cRect.left > mRect.right || cRect.bottom < mRect.top || cRect.top > mRect.bottom);
-        if (intersects && !selected.has(id)) toggleSelect(id);
-      });
+      if (!marqueeMoved) {
+        // Plain click on empty canvas — deselect everything.
+        clearSelection();
+      } else {
+        let newlySelected = 0;
+        Object.entries(cardIndex).forEach(([id, c]) => {
+          if (c.cardEl.dataset.cat !== catId || c.cardEl.style.display === 'none') return;
+          const cRect = c.cardEl.getBoundingClientRect();
+          const intersects = !(cRect.right < mRect.left || cRect.left > mRect.right || cRect.bottom < mRect.top || cRect.top > mRect.bottom);
+          if (intersects && !selected.has(id)) { toggleSelect(id); newlySelected++; }
+        });
+        if (newlySelected > 1) {
+          const worldA = worldPointFromEvent({ clientX: mRect.left, clientY: mRect.top });
+          const worldB = worldPointFromEvent({ clientX: mRect.right, clientY: mRect.bottom });
+          openGroupPopup(catId, e.clientX, e.clientY, worldA, worldB);
+        }
+      }
       marquee.remove();
       marquee = null;
     }
@@ -1056,19 +1191,48 @@ function initCanvasInteractions(catId) {
     applyTransform(catId);
   }, { passive: false });
 
-  // Dragging — images (figure.card) and text annotations (.annotation-wrap) share this logic
-  let dragEl = null, dragKind = null, dragStart = { x: 0, y: 0 }, elStart = { x: 0, y: 0 }, moved = false;
+  // Dragging — images (figure.card), text annotations (.annotation-wrap) and group
+  // boxes (drag via .group-titlebar, which also carries its member cards/annotations
+  // along) all share this logic.
+  let dragEl = null, dragKind = null, dragStart = { x: 0, y: 0 }, elStart = { x: 0, y: 0 }, moved = false, dragMembers = [];
   vp.addEventListener('mousedown', (e) => {
-    if (e.altKey) return; // let the browser's native "drag file to Finder" gesture take over instead
+    if (e.altKey || e.button !== 0) return; // right-click is handled by the contextmenu listener instead
     const cardEl = e.target.closest('figure.card');
     const annEl = e.target.closest('.annotation-wrap');
+    const groupTitlebar = e.target.closest('.group-titlebar');
     if (cardEl) {
-      if (e.target.closest('.select-check, .delete-x, .download-btn, .resize-handle, .rating-row, .note-editor, .move-select')) return;
+      if (e.target.closest('.select-check, .delete-x, .download-btn, .resize-handle, .rating-row, .note-editor')) return;
       dragEl = cardEl; dragKind = 'card';
     } else if (annEl) {
       if (e.target.closest('.annotation-toolbar')) return;
       if (document.activeElement === annEl.querySelector('.annotation')) return; // already editing text, let cursor placement work
       dragEl = annEl; dragKind = 'annotation';
+    } else if (groupTitlebar) {
+      if (e.target.closest('.group-toolbar')) return;
+      if (document.activeElement === groupTitlebar.querySelector('.group-title')) return;
+      const box = document.querySelector(`.group-box[data-id="${groupTitlebar.dataset.id}"]`);
+      if (!box) return;
+      dragEl = box; dragKind = 'group';
+      // Snapshot which cards/annotations currently sit inside the group's bounds
+      // (by center point) so they move along with it.
+      const gx = parseFloat(box.style.left), gy = parseFloat(box.style.top);
+      const gw = parseFloat(box.style.width), gh = parseFloat(box.style.height);
+      dragMembers = [];
+      Object.entries(cardIndex).forEach(([mid, c]) => {
+        if (c.cardEl.dataset.cat !== catId) return;
+        const cx = parseFloat(c.cardEl.style.left), cy = parseFloat(c.cardEl.style.top);
+        const centerX = cx + c.cardEl.offsetWidth / 2, centerY = cy + c.cardEl.offsetHeight / 2;
+        if (centerX >= gx && centerX <= gx + gw && centerY >= gy && centerY <= gy + gh) {
+          dragMembers.push({ type: 'card', id: mid, el: c.cardEl, startX: cx, startY: cy });
+        }
+      });
+      Object.entries(annotationIndex).forEach(([mid, a]) => {
+        if (a.el.dataset.cat !== catId) return;
+        const ax = parseFloat(a.el.style.left), ay = parseFloat(a.el.style.top);
+        if (ax >= gx && ax <= gx + gw && ay >= gy && ay <= gy + gh) {
+          dragMembers.push({ type: 'annotation', id: mid, el: a.el, startX: ax, startY: ay });
+        }
+      });
     } else {
       return;
     }
@@ -1084,10 +1248,15 @@ function initCanvasInteractions(catId) {
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
       moved = true;
       dragEl.classList.add('dragging');
+      if (dragKind === 'group') dragEl.querySelector('.group-titlebar').classList.add('dragging');
     }
     if (moved) {
       dragEl.style.left = snap(elStart.x + dx) + 'px';
       dragEl.style.top = snap(elStart.y + dy) + 'px';
+      dragMembers.forEach(m => {
+        m.el.style.left = snap(m.startX + dx) + 'px';
+        m.el.style.top = snap(m.startY + dy) + 'px';
+      });
     }
   });
   window.addEventListener('mouseup', (e) => {
@@ -1096,21 +1265,35 @@ function initCanvasInteractions(catId) {
     const x = parseFloat(dragEl.style.left), y = parseFloat(dragEl.style.top);
     if (moved) {
       dragEl.classList.remove('dragging');
-      if (dragKind === 'card') persistPosition(id, x, y);
-      else persistAnnotation(id, { x, y });
+      if (dragKind === 'card') {
+        persistPosition(id, x, y);
+      } else if (dragKind === 'annotation') {
+        persistAnnotation(id, { x, y });
+      } else if (dragKind === 'group') {
+        dragEl.querySelector('.group-titlebar').classList.remove('dragging');
+        persistGroup(id, { x, y });
+        dragMembers.forEach(m => {
+          const mx = parseFloat(m.el.style.left), my = parseFloat(m.el.style.top);
+          if (m.type === 'card') persistPosition(m.id, mx, my);
+          else persistAnnotation(m.id, { x: mx, y: my });
+        });
+      }
     } else if (dragKind === 'card') {
       const c = cardIndex[id];
       if (c) openLightbox(c.src, c.caption, c.isVideo);
     } else if (dragKind === 'annotation') {
       annotationIndex[id].textEl.focus();
+    } else if (dragKind === 'group') {
+      groupIndex[id].titleEl.focus();
     }
-    dragEl = null; dragKind = null;
+    dragEl = null; dragKind = null; dragMembers = [];
   });
 
   // Resizing a card — drag its corner handle to change width; height follows via the
   // media's own aspect ratio (object-fit:contain + height:auto on the <img>/<video>).
   let resizeEl = null, resizeStartX = 0, resizeStartW = 0;
   vp.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
     const handle = e.target.closest('.resize-handle');
     if (!handle) return;
     resizeEl = handle.closest('figure.card');
@@ -1316,6 +1499,250 @@ function createAnnotationAt(catId, x, y) {
   document.execCommand('selectAll', false, null);
 }
 
+// ---------- Groups (soft-glow bounding boxes) ----------
+async function fetchGroups() {
+  try {
+    const res = await fetch(GROUPS_API);
+    groups = await res.json();
+  } catch (e) {
+    console.warn('Could not load groups', e);
+    groups = {};
+  }
+  Object.entries(groups).forEach(([id, rec]) => {
+    if (rec.deleted) return;
+    const world = canvasState[rec.catId] && canvasState[rec.catId].worldEl;
+    if (world) renderGroupEl(id, rec, world);
+  });
+}
+
+function applyGroupColor(box, color) {
+  box.style.border = `1.5px solid ${color}99`;
+  box.style.background = `${color}14`;
+  box.style.boxShadow = `0 0 40px 6px ${color}33, inset 0 0 30px ${color}14`;
+}
+
+function renderGroupEl(id, rec, world) {
+  const box = document.createElement('div');
+  box.className = 'group-box';
+  box.dataset.id = id;
+  box.dataset.cat = rec.catId;
+  box.style.left = rec.x + 'px';
+  box.style.top = rec.y + 'px';
+  box.style.width = rec.w + 'px';
+  box.style.height = rec.h + 'px';
+  applyGroupColor(box, rec.color);
+
+  const titlebar = document.createElement('div');
+  titlebar.className = 'group-titlebar';
+  titlebar.dataset.id = id;
+
+  const title = document.createElement('div');
+  title.className = 'group-title';
+  title.contentEditable = 'true';
+  title.textContent = rec.title || 'Group';
+  title.style.color = rec.color;
+  title.style.background = rec.color + '22';
+  title.addEventListener('mousedown', (e) => e.stopPropagation());
+  title.addEventListener('blur', () => persistGroup(id, { title: title.textContent }));
+  titlebar.appendChild(title);
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'group-toolbar';
+  toolbar.addEventListener('mousedown', (e) => e.stopPropagation());
+  GROUP_COLOR_PRESETS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.background = c;
+    sw.addEventListener('click', () => {
+      applyGroupColor(box, c);
+      title.style.color = c;
+      title.style.background = c + '22';
+      persistGroup(id, { color: c });
+    });
+    toolbar.appendChild(sw);
+  });
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.textContent = '✕';
+  del.addEventListener('click', () => {
+    persistGroup(id, { deleted: true });
+    box.remove();
+    delete groupIndex[id];
+  });
+  toolbar.appendChild(del);
+  titlebar.appendChild(toolbar);
+
+  box.appendChild(titlebar);
+  world.insertBefore(box, world.firstChild); // paint behind cards/annotations
+  groupIndex[id] = { el: box, titleEl: title, titlebarEl: titlebar };
+  return box;
+}
+
+async function persistGroup(id, extra) {
+  const current = groups[id] || { catId: extra.catId, title: 'Group', color: '#7c9cff', x: 0, y: 0, w: 300, h: 200 };
+  groups[id] = { ...current, ...extra };
+  const body = { groupId: id, catId: groups[id].catId, title: groups[id].title, color: groups[id].color, x: groups[id].x, y: groups[id].y, w: groups[id].w, h: groups[id].h, deleted: !!groups[id].deleted, ...extra };
+  try {
+    await fetch(GROUPS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify(body)
+    });
+  } catch (e) {
+    console.warn('Could not save group', e);
+  }
+}
+
+function createGroupAt(catId, x, y, w, h, title, color) {
+  const id = 'grp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const rec = { catId, title, color, x, y, w, h, deleted: false };
+  groups[id] = rec;
+  const world = canvasState[catId].worldEl;
+  renderGroupEl(id, rec, world);
+  persistGroup(id, {});
+  return id;
+}
+
+// ---------- "Create a group?" popup (offered after a box-select that catches 2+ cards) ----------
+const groupPopup = document.getElementById('groupPopup');
+const groupTitleInput = document.getElementById('groupTitleInput');
+const groupColorPresetsEl = document.getElementById('groupColorPresets');
+const groupColorCustom = document.getElementById('groupColorCustom');
+let pendingGroup = null;
+let pendingGroupColor = GROUP_COLOR_PRESETS[0];
+
+GROUP_COLOR_PRESETS.forEach((c, i) => {
+  const sw = document.createElement('div');
+  sw.className = 'preset' + (i === 0 ? ' active' : '');
+  sw.style.background = c;
+  sw.dataset.color = c;
+  sw.addEventListener('click', () => {
+    pendingGroupColor = c;
+    groupColorCustom.value = c;
+    [...groupColorPresetsEl.children].forEach(el => el.classList.toggle('active', el.dataset.color === c));
+  });
+  groupColorPresetsEl.appendChild(sw);
+});
+groupColorCustom.addEventListener('input', () => {
+  pendingGroupColor = groupColorCustom.value;
+  [...groupColorPresetsEl.children].forEach(el => el.classList.remove('active'));
+});
+
+function openGroupPopup(catId, clientX, clientY, worldA, worldB) {
+  const pad = 24;
+  pendingGroup = {
+    catId,
+    x: Math.min(worldA.x, worldB.x) - pad,
+    y: Math.min(worldA.y, worldB.y) - pad,
+    w: Math.abs(worldB.x - worldA.x) + pad * 2,
+    h: Math.abs(worldB.y - worldA.y) + pad * 2,
+  };
+  groupTitleInput.value = '';
+  pendingGroupColor = GROUP_COLOR_PRESETS[0];
+  groupColorCustom.value = pendingGroupColor;
+  [...groupColorPresetsEl.children].forEach((el, i) => el.classList.toggle('active', i === 0));
+
+  groupPopup.classList.add('open');
+  const popupRect = groupPopup.getBoundingClientRect();
+  groupPopup.style.left = Math.min(clientX, window.innerWidth - popupRect.width - 8) + 'px';
+  groupPopup.style.top = Math.min(clientY, window.innerHeight - popupRect.height - 8) + 'px';
+  groupTitleInput.focus();
+}
+
+function closeGroupPopup() {
+  groupPopup.classList.remove('open');
+  pendingGroup = null;
+}
+
+document.getElementById('groupCreateBtn').addEventListener('click', () => {
+  if (!pendingGroup) return;
+  const title = groupTitleInput.value.trim() || 'Group';
+  createGroupAt(pendingGroup.catId, pendingGroup.x, pendingGroup.y, pendingGroup.w, pendingGroup.h, title, pendingGroupColor);
+  closeGroupPopup();
+});
+document.getElementById('groupSkipBtn').addEventListener('click', closeGroupPopup);
+window.addEventListener('mousedown', (e) => {
+  if (groupPopup.classList.contains('open') && !e.target.closest('.group-popup')) closeGroupPopup();
+});
+
+// ---------- Hold Space to pan (plain drag is box-select instead) ----------
+let spaceHeld = false;
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !isTypingTarget(e.target)) {
+    spaceHeld = true;
+    document.body.classList.add('space-pan-mode');
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    spaceHeld = false;
+    document.body.classList.remove('space-pan-mode');
+  }
+});
+
+function isTypingTarget(el) {
+  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+}
+
+// ---------- Hotkeys (Figma-style) ----------
+window.addEventListener('keydown', (e) => {
+  if (isTypingTarget(e.target)) return;
+
+  if (e.key === 'Escape') {
+    clearSelection();
+    closeContextMenu();
+    closeGroupPopup();
+    if (activeCatId) {
+      const st = canvasState[activeCatId];
+      st.placingText = false;
+      st.viewportEl.classList.remove('placing-text');
+    }
+    return;
+  }
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size) {
+    e.preventDefault();
+    [...selected].forEach(id => deleteImage(id));
+    return;
+  }
+
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+    if (!activeCatId) return;
+    e.preventDefault();
+    Object.entries(cardIndex).forEach(([id, c]) => {
+      if (c.cardEl.dataset.cat === activeCatId && c.cardEl.style.display !== 'none' && !selected.has(id)) toggleSelect(id);
+    });
+    return;
+  }
+
+  if (!activeCatId) return;
+  const st = canvasState[activeCatId];
+
+  if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    st.placingText = true;
+    st.viewportEl.classList.add('placing-text');
+    return;
+  }
+
+  if (e.key === '+' || e.key === '=') {
+    e.preventDefault();
+    st.zoom = Math.min(3, st.zoom * 1.2);
+    applyTransform(activeCatId);
+    return;
+  }
+  if (e.key === '-' || e.key === '_') {
+    e.preventDefault();
+    st.zoom = Math.max(0.3, st.zoom / 1.2);
+    applyTransform(activeCatId);
+    return;
+  }
+  if (e.shiftKey && e.code === 'Digit0') { // Shift+0, keycode-based so it works across keyboard layouts
+    st.panX = 0; st.panY = 0; st.zoom = 1;
+    applyTransform(activeCatId);
+    return;
+  }
+});
+
 async function postRecord(id, extra) {
   const current = ratings[id] || { stars: 0, note: '' };
   const body = { imageId: id, stars: current.stars || 0, note: current.note || '', ...extra };
@@ -1387,26 +1814,87 @@ async function moveImage(id, destValue) {
   postRecord(id, { movedTo: destValue });
 }
 
+// ---------- Right-click context menu ----------
+const contextMenu = document.getElementById('contextMenu');
+
+function closeContextMenu() { contextMenu.classList.remove('open'); }
+
+function openCardContextMenu(clientX, clientY, id, catId, groupId) {
+  // Right-clicking a card that's already part of a multi-selection acts on the whole
+  // selection; right-clicking anything else selects just that card first.
+  if (!selected.has(id)) {
+    clearSelection();
+    toggleSelect(id);
+  }
+  const targetIds = [...selected];
+  const currentDest = `${catId}__${groupId || "_"}`;
+
+  contextMenu.innerHTML = '';
+  const addItem = (label, onClick, danger) => {
+    const item = document.createElement('div');
+    item.className = 'cm-item' + (danger ? ' danger' : '');
+    item.textContent = label;
+    item.addEventListener('click', () => { onClick(); closeContextMenu(); });
+    contextMenu.appendChild(item);
+  };
+
+  addItem(targetIds.length > 1 ? `Download ${targetIds.length} files` : 'Download', () => {
+    targetIds.forEach((tid, i) => {
+      const entry = cardIndex[tid];
+      if (entry) setTimeout(() => downloadFile(entry.src, entry.src.split('/').pop()), i * 200);
+    });
+  });
+
+  const sep1 = document.createElement('div');
+  sep1.className = 'cm-sep';
+  contextMenu.appendChild(sep1);
+
+  const heading = document.createElement('div');
+  heading.className = 'cm-heading';
+  heading.textContent = 'Move to';
+  contextMenu.appendChild(heading);
+  DEST_OPTIONS
+    .filter(d => targetIds.length > 1 || d.value !== currentDest)
+    .forEach(d => addItem(d.label, () => targetIds.forEach(tid => moveImage(tid, d.value))));
+
+  const sep2 = document.createElement('div');
+  sep2.className = 'cm-sep';
+  contextMenu.appendChild(sep2);
+
+  addItem(targetIds.length > 1 ? `Delete ${targetIds.length} images` : 'Delete', () => {
+    targetIds.forEach(tid => deleteImage(tid));
+  }, true);
+
+  contextMenu.classList.add('open');
+  const menuRect = contextMenu.getBoundingClientRect();
+  const x = Math.min(clientX, window.innerWidth - menuRect.width - 8);
+  const y = Math.min(clientY, window.innerHeight - menuRect.height - 8);
+  contextMenu.style.left = x + 'px';
+  contextMenu.style.top = y + 'px';
+}
+
+window.addEventListener('mousedown', (e) => {
+  if (!e.target.closest('.context-menu')) closeContextMenu();
+});
+window.addEventListener('contextmenu', (e) => {
+  if (!e.target.closest('figure.card')) closeContextMenu();
+});
+
 // ---------- Filter ----------
 const searchInput = document.getElementById('search');
-const minRatingSelect = document.getElementById('minRating');
 
 function applyFilters() {
   const q = searchInput.value.trim().toLowerCase();
-  const minRating = parseInt(minRatingSelect.value, 10);
   Object.entries(cardIndex).forEach(([id, { cardEl }]) => {
     const rec = ratings[id];
-    const stars = rec ? rec.stars : 0;
     const note = (rec && rec.note ? rec.note : '').toLowerCase();
     const caption = cardEl.dataset.caption;
-    const matchesSearch = !q || caption.includes(q) || note.includes(q);
-    const matchesRating = stars >= minRating;
-    cardEl.classList.toggle('hidden', !(matchesSearch && matchesRating));
-    cardEl.style.display = (matchesSearch && matchesRating) ? '' : 'none';
+    const matches = !q || caption.includes(q) || note.includes(q);
+    cardEl.classList.toggle('hidden', !matches);
+    cardEl.style.display = matches ? '' : 'none';
   });
 }
 searchInput.addEventListener('input', applyFilters);
-minRatingSelect.addEventListener('change', applyFilters);
 
 // ---------- Global floating toolbar (acts on whichever category is currently open) ----------
 document.getElementById('ft-zoom-in').addEventListener('click', () => {
@@ -1433,13 +1921,6 @@ document.getElementById('ft-add-text').addEventListener('click', () => {
   const st = canvasState[activeCatId];
   st.placingText = true;
   st.viewportEl.classList.add('placing-text');
-});
-document.getElementById('ft-export').addEventListener('click', () => {
-  [...selected].forEach((id, i) => {
-    const entry = cardIndex[id];
-    if (!entry) return;
-    setTimeout(() => downloadFile(entry.src, entry.src.split('/').pop()), i * 200);
-  });
 });
 
 // ---------- Alt-held drag-to-Finder mode ----------
@@ -1497,6 +1978,7 @@ document.getElementById('newCategoryBtn').addEventListener('click', () => {
 
 fetchRatings();
 fetchAnnotations();
+fetchGroups();
 </script>
 
 </body>
