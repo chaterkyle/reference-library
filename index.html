@@ -823,8 +823,8 @@ CATEGORIES.forEach(cat => {
 
       if (isVideo(img.file)) {
         const videoEl = thumbWrap.querySelector('video');
-        thumbWrap.addEventListener('mouseenter', () => { videoEl.play().catch(() => {}); });
-        thumbWrap.addEventListener('mouseleave', () => { videoEl.pause(); videoEl.currentTime = 0; });
+        fig.addEventListener('mouseenter', () => { videoEl.play().catch(() => {}); });
+        fig.addEventListener('mouseleave', () => { videoEl.pause(); videoEl.currentTime = 0; });
       }
 
       const checkEl = document.createElement('div');
