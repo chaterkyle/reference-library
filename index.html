@@ -104,8 +104,6 @@
   .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
   .category-tile .tile-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 0; }
 
-  .category { margin-top: 0; display: none; }
-  .category.active { display: block; }
 
   .floating-toolbar {
     display: none;
@@ -992,14 +990,14 @@ const minimapCanvas = document.getElementById('minimapCanvas');
 const minimapCtx = minimapCanvas.getContext('2d');
 
 function minimapScale() {
-  const st = canvasState[activeCatId];
+  const st = canvasState[MAIN];
   const scale = Math.min(MINIMAP_W / st.worldW, MINIMAP_H / st.worldH);
   return { st, scale, offX: (MINIMAP_W - st.worldW * scale) / 2, offY: (MINIMAP_H - st.worldH * scale) / 2 };
 }
 
+// Shows the WHOLE shared canvas (every card/group, not just the focused category) --
+// there's only one world now, so the minimap is a true overview of everything.
 function updateMinimap() {
-  if (!activeCatId) { minimapPanel.classList.remove('show'); return; }
-  minimapPanel.classList.add('show');
   const { st, scale, offX, offY } = minimapScale();
 
   minimapCtx.clearRect(0, 0, MINIMAP_W, MINIMAP_H);
@@ -1007,14 +1005,14 @@ function updateMinimap() {
   minimapCtx.fillRect(offX, offY, st.worldW * scale, st.worldH * scale);
 
   Object.values(groups).forEach(g => {
-    if (g.deleted || g.catId !== activeCatId) return;
+    if (g.deleted) return;
     minimapCtx.fillStyle = hexToRgba(g.color || '#7c9cff', 0.25);
     minimapCtx.fillRect(offX + g.x * scale, offY + g.y * scale, g.w * scale, g.h * scale);
   });
 
   minimapCtx.fillStyle = 'rgba(234,234,236,0.6)';
   Object.values(cardIndex).forEach(c => {
-    if (c.cardEl.dataset.cat !== activeCatId || c.cardEl.style.display === 'none') return;
+    if (c.cardEl.style.display === 'none') return;
     const x = parseFloat(c.cardEl.style.left), y = parseFloat(c.cardEl.style.top);
     minimapCtx.fillRect(offX + x * scale, offY + y * scale, 3, 3);
   });
@@ -1034,7 +1032,6 @@ function hexToRgba(hex, alpha) {
 }
 
 minimapCanvas.addEventListener('click', (e) => {
-  if (!activeCatId) return;
   const { st, scale, offX, offY } = minimapScale();
   const rect = minimapCanvas.getBoundingClientRect();
   const worldX = (e.clientX - rect.left - offX) / scale;
@@ -1042,7 +1039,7 @@ minimapCanvas.addEventListener('click', (e) => {
   const vpRect = st.viewportEl.getBoundingClientRect();
   st.panX = vpRect.width / 2 - worldX * st.zoom;
   st.panY = vpRect.height / 2 - worldY * st.zoom;
-  applyTransform(activeCatId);
+  applyTransform(MAIN);
 });
 
 // ---------- Big hover preview ----------
@@ -1499,7 +1496,35 @@ function computeDefaultLayout(cat) {
   return { positions, zones, worldW: maxW + 400, worldH: curY + 400 };
 }
 
+// ---------- Single shared canvas: every category is a cluster placed at a fixed origin ----------
+// Deterministic and pure (same CATEGORIES order -> same output every time), so this needs no
+// network round-trip to compute. Each category also gets a persisted Group box (see
+// STABLE_GROUP_ID) wrapping its cluster -- that's the actual "stack related things together"
+// mechanism, reusing the existing freeform Group feature instead of inventing a new one.
+function stableGroupId(catId) { return `cat-${catId}`; }
+
+const CLUSTER_GAP_X = 120;
+const CLUSTER_WRAP_WIDTH = 6000;
+const CLUSTER_LAYOUTS = {};
+const CLUSTER_ORIGINS = {};
+(function computeClusterOrigins() {
+  let cursorX = 0, cursorY = 0, rowH = 0;
+  CATEGORIES.forEach(cat => {
+    const layout = computeDefaultLayout(cat);
+    CLUSTER_LAYOUTS[cat.id] = layout;
+    if (cursorX > 0 && cursorX + layout.worldW > CLUSTER_WRAP_WIDTH) {
+      cursorX = 0;
+      cursorY += rowH + CLUSTER_GAP_X;
+      rowH = 0;
+    }
+    CLUSTER_ORIGINS[cat.id] = { x: cursorX, y: cursorY };
+    cursorX += layout.worldW + CLUSTER_GAP_X;
+    rowH = Math.max(rowH, layout.worldH);
+  });
+})();
+
 // ---------- Build DOM ----------
+const MAIN = "world"; // single shared canvasState key -- there's only one canvas now
 const categoriesWrap = document.getElementById('categoriesWrap');
 const tileGrid = document.getElementById('tileGrid');
 
@@ -1524,6 +1549,20 @@ function previewThumbs(cat) {
 document.getElementById('homeIcon').innerHTML = ICONS.home;
 document.getElementById('homeLink').addEventListener('click', (e) => { e.preventDefault(); showHome(); });
 
+// One shared canvas for the whole site. Every category is a cluster of cards placed at its
+// own fixed origin (CLUSTER_ORIGINS) inside this single world, wrapped in a persisted Group
+// box (see stableGroupId) -- that's the "everything on one canvas, related things stacked
+// together" model instead of separate per-category pages.
+const mainViewport = document.createElement('div');
+mainViewport.className = 'canvas-viewport';
+mainViewport.id = 'mainViewport';
+const world = document.createElement('div');
+world.className = 'canvas-world';
+mainViewport.appendChild(world);
+categoriesWrap.appendChild(mainViewport);
+
+let worldMaxX = 0, worldMaxY = 0;
+
 CATEGORIES.forEach(cat => {
   const thumbs = previewThumbs(cat);
   const tile = document.createElement('div');
@@ -1544,26 +1583,16 @@ CATEGORIES.forEach(cat => {
   tile.addEventListener('click', () => showCategory(cat.id));
   tileGrid.appendChild(tile);
 
-  const catEl = document.createElement('div');
-  catEl.className = 'category';
-  catEl.id = cat.id;
-
-  const viewport = document.createElement('div');
-  viewport.className = 'canvas-viewport';
-  const world = document.createElement('div');
-  world.className = 'canvas-world';
-  viewport.appendChild(world);
-  catEl.appendChild(viewport);
-
-  const layout = computeDefaultLayout(cat);
-  world.style.width = layout.worldW + 'px';
-  world.style.height = layout.worldH + 'px';
+  const origin = CLUSTER_ORIGINS[cat.id];
+  const layout = CLUSTER_LAYOUTS[cat.id];
+  worldMaxX = Math.max(worldMaxX, origin.x + layout.worldW);
+  worldMaxY = Math.max(worldMaxY, origin.y + layout.worldH);
 
   layout.zones.forEach(z => {
     const el = document.createElement('div');
     el.className = 'zone-label';
-    el.style.left = z.x + 'px';
-    el.style.top = z.y + 'px';
+    el.style.left = (origin.x + z.x) + 'px';
+    el.style.top = (origin.y + z.y) + 'px';
     el.innerHTML = `${z.label} <span class="zone-count">${z.count} images</span>`;
     world.appendChild(el);
   });
@@ -1572,11 +1601,11 @@ CATEGORIES.forEach(cat => {
   groups.forEach(group => {
     if (group.images.length === 0) {
       const key = `__empty__${cat.id}__${group.id || "_"}`;
-      const pos = layout.positions[key];
+      const relPos = layout.positions[key];
       const empty = document.createElement('div');
       empty.className = 'empty-state';
-      empty.style.left = pos.x + 'px';
-      empty.style.top = pos.y + 'px';
+      empty.style.left = (origin.x + relPos.x) + 'px';
+      empty.style.top = (origin.y + relPos.y) + 'px';
       empty.textContent = 'No images yet — pending sourcing.';
       world.appendChild(empty);
       return;
@@ -1584,7 +1613,8 @@ CATEGORIES.forEach(cat => {
     group.images.forEach(img => {
       const id = imageId(cat.id, group.id, img.file);
       const src = `images/${img.folder || group.folder}/${img.file}`;
-      const pos = layout.positions[id];
+      const relPos = layout.positions[id];
+      const pos = { x: origin.x + relPos.x, y: origin.y + relPos.y };
 
       const fig = document.createElement('figure');
       fig.className = 'card';
@@ -1710,31 +1740,34 @@ CATEGORIES.forEach(cat => {
       });
 
       world.appendChild(fig);
-      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, tagChips, src, caption: img.caption, isVideo: isVideo(img.file), url: img.url || null };
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, tagChips, src, caption: img.caption, isVideo: isVideo(img.file), url: img.url || null, catId: cat.id, subId: group.id };
     });
   });
-
-  categoriesWrap.appendChild(catEl);
-  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world, placingText: false, worldW: layout.worldW, worldH: layout.worldH };
-  initCanvasInteractions(cat.id);
 });
 
-// ---------- Home / category navigation ----------
+canvasState[MAIN] = { panX: 0, panY: 0, zoom: 1, viewportEl: mainViewport, worldEl: world, placingText: false, worldW: worldMaxX + 400, worldH: worldMaxY + 400 };
+initCanvasInteractions(MAIN);
+
+// ---------- Home overview / canvas focus ----------
+// "activeCatId" here means "which category is currently focused" (scopes Organize,
+// zoom-to-fit, the text tool, and the minimap highlight) -- NOT which canvas is shown,
+// since there's only one canvas (MAIN) now. Home is a lightweight overview overlay on
+// top of that single canvas, not a separate page.
 let activeCatId = null;
 function showHome() {
   activeCatId = null;
   document.getElementById('home').style.display = 'block';
-  document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
+  document.getElementById('mainViewport').style.display = 'none';
   document.getElementById('crumb').textContent = '';
   document.getElementById('floatingToolbar').classList.remove('open');
+  document.getElementById('minimapPanel').classList.remove('show');
   hideHoverPreview();
-  updateMinimap();
   history.replaceState(null, '', '#');
 }
 function showCategory(id) {
   activeCatId = id;
   document.getElementById('home').style.display = 'none';
-  document.querySelectorAll('.category').forEach(el => el.classList.toggle('active', el.id === id));
+  document.getElementById('mainViewport').style.display = 'block';
   const cat = CATEGORIES.find(c => c.id === id);
   document.getElementById('crumb').innerHTML = cat ? `›  ${ICONS[cat.icon]} ${cat.title}` : '';
   document.getElementById('floatingToolbar').classList.add('open');
@@ -1743,7 +1776,7 @@ function showCategory(id) {
   updateMinimap();
   history.replaceState(null, '', `#${id}`);
 }
-if (location.hash && document.getElementById(location.hash.slice(1))) {
+if (location.hash && CATEGORIES.some(c => c.id === location.hash.slice(1))) {
   showCategory(location.hash.slice(1));
 } else {
   showHome();
@@ -1752,10 +1785,8 @@ if (location.hash && document.getElementById(location.hash.slice(1))) {
 function applyTransform(catId) {
   const st = canvasState[catId];
   st.worldEl.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.zoom})`;
-  if (catId === activeCatId) {
-    document.getElementById('ft-zoom-level').textContent = Math.round(st.zoom * 100) + '%';
-    updateMinimap();
-  }
+  document.getElementById('ft-zoom-level').textContent = Math.round(st.zoom * 100) + '%';
+  updateMinimap();
 }
 
 // ---------- Canvas pan/zoom ----------
@@ -1832,7 +1863,7 @@ function initCanvasInteractions(catId) {
       } else {
         let newlySelected = 0;
         Object.entries(cardIndex).forEach(([id, c]) => {
-          if (c.cardEl.dataset.cat !== catId || c.cardEl.style.display === 'none') return;
+          if (c.cardEl.style.display === 'none') return;
           const cRect = c.cardEl.getBoundingClientRect();
           const intersects = !(cRect.right < mRect.left || cRect.left > mRect.right || cRect.bottom < mRect.top || cRect.top > mRect.bottom);
           if (intersects && !selected.has(id)) { toggleSelect(id); newlySelected++; }
@@ -1899,7 +1930,6 @@ function initCanvasInteractions(catId) {
       const gw = parseFloat(box.style.width), gh = parseFloat(box.style.height);
       dragMembers = [];
       Object.entries(cardIndex).forEach(([mid, c]) => {
-        if (c.cardEl.dataset.cat !== catId) return;
         const cx = parseFloat(c.cardEl.style.left), cy = parseFloat(c.cardEl.style.top);
         const centerX = cx + c.cardEl.offsetWidth / 2, centerY = cy + c.cardEl.offsetHeight / 2;
         if (centerX >= gx && centerX <= gx + gw && centerY >= gy && centerY <= gy + gh) {
@@ -1907,7 +1937,6 @@ function initCanvasInteractions(catId) {
         }
       });
       Object.entries(annotationIndex).forEach(([mid, a]) => {
-        if (a.el.dataset.cat !== catId) return;
         const ax = parseFloat(a.el.style.left), ay = parseFloat(a.el.style.top);
         if (ax >= gx && ax <= gx + gw && ay >= gy && ay <= gy + gh) {
           dragMembers.push({ type: 'annotation', id: mid, el: a.el, startX: ax, startY: ay });
@@ -2006,7 +2035,6 @@ function initCanvasInteractions(catId) {
     resizeGroupStart = { x: gx, y: gy, w: gw, h: gh, mouseX: e.clientX, mouseY: e.clientY };
     resizeGroupMembers = [];
     Object.entries(cardIndex).forEach(([mid, c]) => {
-      if (c.cardEl.dataset.cat !== catId) return;
       const cx = parseFloat(c.cardEl.style.left), cy = parseFloat(c.cardEl.style.top);
       const cw = c.cardEl.offsetWidth;
       const centerX = cx + cw / 2, centerY = cy + c.cardEl.offsetHeight / 2;
@@ -2091,9 +2119,11 @@ function organize(catId) {
 }
 
 // Zooms/pans so every visible card in the category is on-screen at once.
+// catId here scopes WHICH cards to fit (the focused category); the pan/zoom itself always
+// targets the single shared canvas (MAIN).
 function zoomToFit(catId) {
-  const st = canvasState[catId];
-  const cards = Object.values(cardIndex).filter(c => c.cardEl.dataset.cat === catId && c.cardEl.style.display !== 'none');
+  const st = canvasState[MAIN];
+  const cards = Object.values(cardIndex).filter(c => (!catId || c.cardEl.dataset.cat === catId) && c.cardEl.style.display !== 'none');
   if (!cards.length) return;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   cards.forEach(c => {
@@ -2110,7 +2140,7 @@ function zoomToFit(catId) {
   st.zoom = zoom;
   st.panX = vpRect.width / 2 - (minX + (maxX - minX) / 2) * zoom;
   st.panY = vpRect.height / 2 - (minY + (maxY - minY) / 2) * zoom;
-  applyTransform(catId);
+  applyTransform(MAIN);
 }
 
 // ---------- Lightbox ----------
@@ -2203,8 +2233,21 @@ async function fetchRatings() {
       renderStars(id);
       renderTags(id);
       if (rec && typeof rec.x === 'number' && typeof rec.y === 'number') {
-        cardIndex[id].cardEl.style.left = rec.x + 'px';
-        cardIndex[id].cardEl.style.top = rec.y + 'px';
+        // One-time rebase: positions saved before the single-canvas rewrite were relative to
+        // that category's own old origin (0,0). Add this image's cluster origin exactly once
+        // (guarded by migratedToSingleCanvas) so old saved spots land in the right place in
+        // the new shared world instead of all collapsing onto whichever cluster sits at (0,0).
+        let x = rec.x, y = rec.y;
+        if (!rec.migratedToSingleCanvas) {
+          const origin = CLUSTER_ORIGINS[cardIndex[id].catId];
+          if (origin) {
+            x += origin.x;
+            y += origin.y;
+            postRecord(id, { x, y, migratedToSingleCanvas: true });
+          }
+        }
+        cardIndex[id].cardEl.style.left = x + 'px';
+        cardIndex[id].cardEl.style.top = y + 'px';
       }
       if (rec && typeof rec.w === 'number') {
         cardIndex[id].cardEl.style.width = rec.w + 'px';
@@ -2330,6 +2373,43 @@ async function fetchGroups() {
     const world = canvasState[rec.catId] && canvasState[rec.catId].worldEl;
     if (world) renderGroupEl(id, rec, world);
   });
+  updateMinimap();
+}
+
+const CATEGORY_GROUP_COLORS = {
+  cinematography: '#7c9cff',
+  'motion-camera': '#f5c542',
+  'motion-design': '#e06b6b',
+  'ordinary-folk': '#6bd48a',
+  'ai-gen': '#c77dff',
+  'inspiration-sites': '#4fd1c5',
+};
+
+// Wraps every category's cluster in a persisted Group box the first time it's ever seen
+// (stable, deterministic id -- see stableGroupId), so reloading doesn't create duplicates and
+// any later manual resize/recolor/rename by dragging the group sticks across sessions.
+async function ensureCategoryGroups() {
+  const worldEl = canvasState[MAIN].worldEl;
+  for (const cat of CATEGORIES) {
+    const gid = stableGroupId(cat.id);
+    if (groups[gid] && !groups[gid].deleted) continue;
+    const origin = CLUSTER_ORIGINS[cat.id];
+    const layout = CLUSTER_LAYOUTS[cat.id];
+    const pad = 50;
+    const rec = {
+      catId: MAIN,
+      title: cat.title,
+      color: CATEGORY_GROUP_COLORS[cat.id] || '#7c9cff',
+      x: origin.x - pad,
+      y: origin.y - pad,
+      w: layout.worldW + pad * 2,
+      h: layout.worldH + pad * 2,
+      deleted: false,
+    };
+    groups[gid] = rec;
+    renderGroupEl(gid, rec, worldEl);
+    persistGroup(gid, {});
+  }
   updateMinimap();
 }
 
@@ -2517,11 +2597,9 @@ window.addEventListener('keydown', (e) => {
     clearSelection();
     closeContextMenu();
     closeGroupPopup();
-    if (activeCatId) {
-      const st = canvasState[activeCatId];
-      st.placingText = false;
-      st.viewportEl.classList.remove('placing-text');
-    }
+    const st = canvasState[MAIN];
+    st.placingText = false;
+    st.viewportEl.classList.remove('placing-text');
     return;
   }
 
@@ -2540,8 +2618,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (!activeCatId) return;
-  const st = canvasState[activeCatId];
+  const st = canvasState[MAIN];
 
   if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey) {
     st.placingText = true;
@@ -2552,18 +2629,17 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '+' || e.key === '=') {
     e.preventDefault();
     st.zoom = Math.min(3, st.zoom * 1.2);
-    applyTransform(activeCatId);
+    applyTransform(MAIN);
     return;
   }
   if (e.key === '-' || e.key === '_') {
     e.preventDefault();
     st.zoom = Math.max(0.3, st.zoom / 1.2);
-    applyTransform(activeCatId);
+    applyTransform(MAIN);
     return;
   }
   if (e.shiftKey && e.code === 'Digit0') { // Shift+0, keycode-based so it works across keyboard layouts
-    st.panX = 0; st.panY = 0; st.zoom = 1;
-    applyTransform(activeCatId);
+    zoomToFit(activeCatId);
     return;
   }
 });
@@ -2710,27 +2786,21 @@ window.addEventListener('contextmenu', (e) => {
 
 // ---------- Global floating toolbar (acts on whichever category is currently open) ----------
 document.getElementById('ft-zoom-in').addEventListener('click', () => {
-  if (!activeCatId) return;
-  const st = canvasState[activeCatId];
+  const st = canvasState[MAIN];
   st.zoom = Math.min(3, st.zoom * 1.2);
-  applyTransform(activeCatId);
+  applyTransform(MAIN);
 });
 document.getElementById('ft-zoom-out').addEventListener('click', () => {
-  if (!activeCatId) return;
-  const st = canvasState[activeCatId];
+  const st = canvasState[MAIN];
   st.zoom = Math.max(0.3, st.zoom / 1.2);
-  applyTransform(activeCatId);
+  applyTransform(MAIN);
 });
 document.getElementById('ft-zoom-reset').addEventListener('click', () => {
-  if (!activeCatId) return;
-  const st = canvasState[activeCatId];
-  st.panX = 0; st.panY = 0; st.zoom = 1;
-  applyTransform(activeCatId);
+  zoomToFit(activeCatId); // fits the focused category, or the whole canvas if nothing is focused
 });
 document.getElementById('ft-organize').addEventListener('click', () => { if (activeCatId) organize(activeCatId); });
 document.getElementById('ft-add-text').addEventListener('click', () => {
-  if (!activeCatId) return;
-  const st = canvasState[activeCatId];
+  const st = canvasState[MAIN];
   st.placingText = true;
   st.viewportEl.classList.add('placing-text');
 });
@@ -2856,14 +2926,14 @@ function goToSearchResult(item) {
   if (item.kind === 'image') {
     const c = cardIndex[item.imageId];
     if (!c) return;
-    const st = canvasState[item.catId];
+    const st = canvasState[MAIN];
     const cx = parseFloat(c.cardEl.style.left) + c.cardEl.offsetWidth / 2;
     const cy = parseFloat(c.cardEl.style.top) + c.cardEl.offsetHeight / 2;
     const vpRect = st.viewportEl.getBoundingClientRect();
     st.zoom = 1;
     st.panX = vpRect.width / 2 - cx;
     st.panY = vpRect.height / 2 - cy;
-    applyTransform(item.catId);
+    applyTransform(MAIN);
     c.cardEl.classList.add('search-highlight');
     setTimeout(() => c.cardEl.classList.remove('search-highlight'), 1600);
   }
@@ -2982,9 +3052,12 @@ document.getElementById('acpSend').addEventListener('click', async () => {
   }
 });
 
-fetchRatings();
-fetchAnnotations();
-fetchGroups();
+(async () => {
+  await fetchGroups();
+  await ensureCategoryGroups();
+  await fetchRatings();
+  fetchAnnotations();
+})();
 </script>
 
 </body>
