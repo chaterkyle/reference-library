@@ -25,71 +25,35 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   }
   header {
-    padding: 28px 40px 16px;
+    padding: 10px 20px;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     background: rgba(14,14,16,0.94);
     backdrop-filter: blur(8px);
     z-index: 20;
-  }
-  h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
-  header > p.tagline { margin: 0; color: var(--muted); font-size: 13px; }
-
-  nav#catnav {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
+    align-items: center;
+    gap: 10px;
   }
+
+  nav#catnav { display: flex; }
   nav#catnav a {
-    color: var(--muted);
+    color: var(--text);
     text-decoration: none;
     font-size: 13px;
+    font-weight: 600;
     padding: 6px 12px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--accent);
     border-radius: 20px;
     white-space: nowrap;
   }
-  nav#catnav a:hover { color: var(--text); border-color: var(--accent); }
-  nav#catnav a#homeLink { color: var(--text); border-color: var(--accent); font-weight: 600; }
+  nav#catnav a:hover { background: rgba(124,156,255,0.12); }
+  .crumb { color: var(--muted); font-size: 13px; }
 
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .toolbar input[type="text"] {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 7px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    min-width: 220px;
-  }
-  .toolbar select {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 7px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-  }
-  .toolbar label {
-    font-size: 12px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .hint { margin: 8px 0 0; color: var(--muted); font-size: 11.5px; }
+  main { padding: 0 24px 100px; }
 
-  main { padding: 8px 40px 100px; }
-
-  #home { margin-top: 32px; }
+  #home { margin-top: 20px; }
   .tile-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -139,56 +103,66 @@
   .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
   .category-tile .tile-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 0; }
 
-  .back-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    margin-bottom: 16px;
-  }
-  .back-btn:hover { color: var(--text); border-color: var(--accent); }
-
-  .category { margin-top: 12px; display: none; }
+  .category { margin-top: 0; display: none; }
   .category.active { display: block; }
-  .category > h2 {
-    font-size: 20px;
-    margin: 0;
-    scroll-margin-top: 220px;
-  }
-  .category > p.desc {
-    margin: 4px 0 0;
-    color: var(--muted);
-    font-size: 12.5px;
-  }
 
-  .canvas-controls {
-    display: flex;
+  .floating-toolbar {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     align-items: center;
-    gap: 8px;
-    margin: 12px 0 8px;
+    gap: 4px;
+    background: rgba(23,23,26,0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 15;
   }
-  .canvas-controls button {
+  .floating-toolbar.open { display: flex; }
+  .floating-toolbar .ft-group { display: flex; align-items: center; gap: 2px; padding: 0 4px; }
+  .floating-toolbar .ft-divider { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
+  .floating-toolbar button, .floating-toolbar .ft-icon-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    height: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .floating-toolbar button:hover, .floating-toolbar .ft-icon-btn:hover { background: var(--panel2); color: var(--text); }
+  .floating-toolbar .zoom-level { font-size: 12px; color: var(--muted); min-width: 38px; text-align: center; }
+  .floating-toolbar input[type="text"] {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    width: 140px;
+    height: 32px;
+  }
+  .floating-toolbar select {
     background: var(--panel2);
     border: 1px solid var(--border);
     color: var(--muted);
-    padding: 5px 10px;
-    border-radius: 6px;
+    padding: 0 8px;
+    border-radius: 8px;
     font-size: 12px;
-    cursor: pointer;
+    height: 32px;
   }
-  .canvas-controls button:hover { color: var(--text); border-color: var(--accent); }
-  .canvas-controls .zoom-level { font-size: 12px; color: var(--muted); min-width: 42px; text-align: center; }
 
   .canvas-viewport {
     position: relative;
     width: 100%;
-    height: 640px;
+    height: calc(100vh - 56px);
     overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 10px;
     background:
       radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 24px 24px,
       var(--canvas-bg);
@@ -283,6 +257,8 @@
     z-index: 10;
   }
   .thumb-wrap { position: relative; pointer-events: none; }
+  body.alt-export-mode .thumb-wrap { pointer-events: auto; }
+  body.alt-export-mode figure.card { cursor: copy; }
   figure.card img, figure.card video {
     width: 100%;
     height: auto;
@@ -299,8 +275,52 @@
     pointer-events: none;
   }
 
-  .select-check, .delete-x {
+  .select-check, .delete-x, .download-btn, .resize-handle {
     pointer-events: auto;
+  }
+  .download-btn {
+    display: flex;
+    position: absolute;
+    top: 36px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.4);
+    z-index: 3;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  figure.card:hover .download-btn { opacity: 1; }
+  .download-btn:hover { background: var(--accent); border-color: var(--accent); color: #0e0e10; }
+
+  .resize-handle {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  figure.card:hover .resize-handle, figure.card.selected .resize-handle { opacity: 0.9; }
+  .resize-handle::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid rgba(255,255,255,0.6);
+    border-bottom: 2px solid rgba(255,255,255,0.6);
   }
   .select-check {
     display: flex;
@@ -451,23 +471,8 @@
 <body>
 
 <header>
-  <h1>Reference Library</h1>
-  <p class="tagline">Motion design reference, organized by category. Drag images to rearrange, scroll to zoom, drag empty space to pan.</p>
   <nav id="catnav"><a href="#" id="homeLink">🏠 Home</a></nav>
-  <div class="toolbar" id="toolbar" style="display:none;">
-    <input type="text" id="search" placeholder="Search captions & notes…">
-    <label>Min rating
-      <select id="minRating">
-        <option value="0">Any</option>
-        <option value="1">★ 1+</option>
-        <option value="2">★★ 2+</option>
-        <option value="3">★★★ 3+</option>
-        <option value="4">★★★★ 4+</option>
-        <option value="5">★★★★★ 5</option>
-      </select>
-    </label>
-  </div>
-  <p class="hint" id="hint" style="display:none;">Filtering hides non-matching images without moving anything else. Drag to rearrange, scroll to zoom, drag empty space to pan — positions sync across devices.</p>
+  <span class="crumb" id="crumb"></span>
 </header>
 
 <main>
@@ -476,6 +481,38 @@
   </div>
   <div id="categoriesWrap"></div>
 </main>
+
+<div class="floating-toolbar" id="floatingToolbar">
+  <div class="ft-group">
+    <button id="ft-zoom-out" title="Zoom out">−</button>
+    <span class="zoom-level" id="ft-zoom-level">100%</span>
+    <button id="ft-zoom-in" title="Zoom in">+</button>
+    <button id="ft-zoom-reset" title="Reset view">⤢</button>
+  </div>
+  <div class="ft-divider"></div>
+  <div class="ft-group">
+    <button id="ft-organize" title="Organize into a grid">▦</button>
+    <button id="ft-add-text" title="Add text label">T</button>
+  </div>
+  <div class="ft-divider"></div>
+  <div class="ft-group">
+    <input type="text" id="search" placeholder="Search…">
+    <select id="minRating">
+      <option value="0">Any ★</option>
+      <option value="1">★1+</option>
+      <option value="2">★2+</option>
+      <option value="3">★3+</option>
+      <option value="4">★4+</option>
+      <option value="5">★5</option>
+    </select>
+  </div>
+  <div class="ft-divider"></div>
+  <div class="ft-group">
+    <button id="ft-export" title="Export selected images">⬇ Export</button>
+  </div>
+  <div class="ft-divider"></div>
+  <button class="ft-icon-btn" id="ft-help" title="Drag empty space to pan · Shift+drag to box-select · Ctrl/Cmd+scroll (or pinch) to zoom, plain scroll pans · Alt+drag a card onto Finder to save it · Hover a card and click ⬇ to download it">?</button>
+</div>
 
 <div id="lightbox">
   <span class="close">&times;</span>
@@ -743,27 +780,6 @@ CATEGORIES.forEach(cat => {
   const catEl = document.createElement('div');
   catEl.className = 'category';
   catEl.id = cat.id;
-  const backBtn = document.createElement('button');
-  backBtn.className = 'back-btn';
-  backBtn.textContent = '← Home';
-  backBtn.addEventListener('click', showHome);
-  catEl.appendChild(backBtn);
-  const headerBlock = document.createElement('div');
-  headerBlock.innerHTML = `<h2>${cat.emoji} ${cat.title}</h2>` + (cat.desc ? `<p class="desc">${cat.desc}</p>` : '');
-  catEl.appendChild(headerBlock);
-
-  const controls = document.createElement('div');
-  controls.className = 'canvas-controls';
-  controls.innerHTML = `
-    <button class="zoom-out">−</button>
-    <span class="zoom-level">100%</span>
-    <button class="zoom-in">+</button>
-    <button class="zoom-reset">Reset view</button>
-    <button class="organize">Organize</button>
-    <button class="add-text">+ Text</button>
-    <span style="font-size:11px;color:var(--muted);">Shift+drag empty space to box-select</span>
-  `;
-  catEl.appendChild(controls);
 
   const viewport = document.createElement('div');
   viewport.className = 'canvas-viewport';
@@ -822,6 +838,11 @@ CATEGORIES.forEach(cat => {
         const videoEl = thumbWrap.querySelector('video');
         fig.addEventListener('mouseenter', () => { videoEl.play().catch(() => {}); });
         fig.addEventListener('mouseleave', () => { videoEl.pause(); videoEl.currentTime = 0; });
+        // Alt+drag export (see body.alt-export-mode): DownloadURL is Chrome-only, harmless no-op elsewhere.
+        videoEl.addEventListener('dragstart', (e) => {
+          const abs = new URL(src, location.href).href;
+          e.dataTransfer.setData('DownloadURL', `video/mp4:${img.file}:${abs}`);
+        });
       }
 
       const checkEl = document.createElement('div');
@@ -838,6 +859,19 @@ CATEGORIES.forEach(cat => {
       deleteEl.addEventListener('mousedown', (e) => e.stopPropagation());
       deleteEl.addEventListener('click', (e) => { e.stopPropagation(); deleteImage(id); });
       fig.appendChild(deleteEl);
+
+      const downloadEl = document.createElement('div');
+      downloadEl.className = 'download-btn';
+      downloadEl.textContent = '⬇';
+      downloadEl.title = 'Download file';
+      downloadEl.addEventListener('mousedown', (e) => e.stopPropagation());
+      downloadEl.addEventListener('click', (e) => { e.stopPropagation(); downloadFile(src, img.file); });
+      fig.appendChild(downloadEl);
+
+      const resizeHandle = document.createElement('div');
+      resizeHandle.className = 'resize-handle';
+      resizeHandle.title = 'Drag to resize';
+      fig.appendChild(resizeHandle);
 
       const figcap = document.createElement('figcaption');
       figcap.textContent = img.caption;
@@ -887,23 +921,27 @@ CATEGORIES.forEach(cat => {
   });
 
   categoriesWrap.appendChild(catEl);
-  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world };
-  initCanvasInteractions(cat.id, controls);
+  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world, placingText: false };
+  initCanvasInteractions(cat.id);
 });
 
 // ---------- Home / category navigation ----------
+let activeCatId = null;
 function showHome() {
+  activeCatId = null;
   document.getElementById('home').style.display = 'block';
   document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
-  document.getElementById('toolbar').style.display = 'none';
-  document.getElementById('hint').style.display = 'none';
+  document.getElementById('crumb').textContent = '';
+  document.getElementById('floatingToolbar').classList.remove('open');
   history.replaceState(null, '', '#');
 }
 function showCategory(id) {
+  activeCatId = id;
   document.getElementById('home').style.display = 'none';
   document.querySelectorAll('.category').forEach(el => el.classList.toggle('active', el.id === id));
-  document.getElementById('toolbar').style.display = 'flex';
-  document.getElementById('hint').style.display = 'block';
+  const cat = CATEGORIES.find(c => c.id === id);
+  document.getElementById('crumb').textContent = cat ? `›  ${cat.emoji} ${cat.title}` : '';
+  document.getElementById('floatingToolbar').classList.add('open');
   history.replaceState(null, '', `#${id}`);
 }
 if (location.hash && document.getElementById(location.hash.slice(1))) {
@@ -915,15 +953,15 @@ if (location.hash && document.getElementById(location.hash.slice(1))) {
 function applyTransform(catId) {
   const st = canvasState[catId];
   st.worldEl.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.zoom})`;
-  const zoomLabel = st.viewportEl.parentElement.querySelector('.zoom-level');
-  if (zoomLabel) zoomLabel.textContent = Math.round(st.zoom * 100) + '%';
+  if (catId === activeCatId) {
+    document.getElementById('ft-zoom-level').textContent = Math.round(st.zoom * 100) + '%';
+  }
 }
 
 // ---------- Canvas pan/zoom ----------
-function initCanvasInteractions(catId, controls) {
+function initCanvasInteractions(catId) {
   const st = canvasState[catId];
   const vp = st.viewportEl;
-  let placingText = false;
 
   let panning = false, panStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
   let marquee = null, marqueeStart = { x: 0, y: 0 };
@@ -937,10 +975,10 @@ function initCanvasInteractions(catId, controls) {
   vp.addEventListener('mousedown', (e) => {
     if (e.target.closest('figure.card, .annotation-wrap')) return; // handled by drag logic below
 
-    if (placingText) {
+    if (st.placingText) {
       const wp = worldPointFromEvent(e);
       createAnnotationAt(catId, Math.round(wp.x), Math.round(wp.y));
-      placingText = false;
+      st.placingText = false;
       vp.classList.remove('placing-text');
       return;
     }
@@ -997,11 +1035,6 @@ function initCanvasInteractions(catId, controls) {
     vp.classList.remove('panning');
   });
 
-  controls.querySelector('.add-text').addEventListener('click', () => {
-    placingText = true;
-    vp.classList.add('placing-text');
-  });
-
   vp.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
@@ -1023,27 +1056,14 @@ function initCanvasInteractions(catId, controls) {
     applyTransform(catId);
   }, { passive: false });
 
-  controls.querySelector('.zoom-in').addEventListener('click', () => {
-    st.zoom = Math.min(3, st.zoom * 1.2);
-    applyTransform(catId);
-  });
-  controls.querySelector('.zoom-out').addEventListener('click', () => {
-    st.zoom = Math.max(0.3, st.zoom / 1.2);
-    applyTransform(catId);
-  });
-  controls.querySelector('.zoom-reset').addEventListener('click', () => {
-    st.panX = 0; st.panY = 0; st.zoom = 1;
-    applyTransform(catId);
-  });
-  controls.querySelector('.organize').addEventListener('click', () => organize(catId));
-
   // Dragging — images (figure.card) and text annotations (.annotation-wrap) share this logic
   let dragEl = null, dragKind = null, dragStart = { x: 0, y: 0 }, elStart = { x: 0, y: 0 }, moved = false;
   vp.addEventListener('mousedown', (e) => {
+    if (e.altKey) return; // let the browser's native "drag file to Finder" gesture take over instead
     const cardEl = e.target.closest('figure.card');
     const annEl = e.target.closest('.annotation-wrap');
     if (cardEl) {
-      if (e.target.closest('.select-check, .delete-x, .rating-row, .note-editor, .move-select')) return;
+      if (e.target.closest('.select-check, .delete-x, .download-btn, .resize-handle, .rating-row, .note-editor, .move-select')) return;
       dragEl = cardEl; dragKind = 'card';
     } else if (annEl) {
       if (e.target.closest('.annotation-toolbar')) return;
@@ -1085,6 +1105,28 @@ function initCanvasInteractions(catId, controls) {
       annotationIndex[id].textEl.focus();
     }
     dragEl = null; dragKind = null;
+  });
+
+  // Resizing a card — drag its corner handle to change width; height follows via the
+  // media's own aspect ratio (object-fit:contain + height:auto on the <img>/<video>).
+  let resizeEl = null, resizeStartX = 0, resizeStartW = 0;
+  vp.addEventListener('mousedown', (e) => {
+    const handle = e.target.closest('.resize-handle');
+    if (!handle) return;
+    resizeEl = handle.closest('figure.card');
+    resizeStartX = e.clientX;
+    resizeStartW = resizeEl.getBoundingClientRect().width / st.zoom;
+    e.stopPropagation();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizeEl) return;
+    const dx = (e.clientX - resizeStartX) / st.zoom;
+    resizeEl.style.width = Math.max(120, Math.min(640, resizeStartW + dx)) + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!resizeEl) return;
+    persistSize(resizeEl.dataset.id, parseFloat(resizeEl.style.width));
+    resizeEl = null;
   });
 }
 
@@ -1163,6 +1205,9 @@ async function fetchRatings() {
       if (rec && typeof rec.x === 'number' && typeof rec.y === 'number') {
         cardIndex[id].cardEl.style.left = rec.x + 'px';
         cardIndex[id].cardEl.style.top = rec.y + 'px';
+      }
+      if (rec && typeof rec.w === 'number') {
+        cardIndex[id].cardEl.style.width = rec.w + 'px';
       }
     }
   });
@@ -1306,6 +1351,20 @@ function persistPosition(id, x, y) {
   postRecord(id, { x, y });
 }
 
+function persistSize(id, w) {
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), w };
+  postRecord(id, { w });
+}
+
+function downloadFile(src, filename) {
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 function removeCard(id) {
   const entry = cardIndex[id];
   if (!entry) return;
@@ -1348,6 +1407,48 @@ function applyFilters() {
 }
 searchInput.addEventListener('input', applyFilters);
 minRatingSelect.addEventListener('change', applyFilters);
+
+// ---------- Global floating toolbar (acts on whichever category is currently open) ----------
+document.getElementById('ft-zoom-in').addEventListener('click', () => {
+  if (!activeCatId) return;
+  const st = canvasState[activeCatId];
+  st.zoom = Math.min(3, st.zoom * 1.2);
+  applyTransform(activeCatId);
+});
+document.getElementById('ft-zoom-out').addEventListener('click', () => {
+  if (!activeCatId) return;
+  const st = canvasState[activeCatId];
+  st.zoom = Math.max(0.3, st.zoom / 1.2);
+  applyTransform(activeCatId);
+});
+document.getElementById('ft-zoom-reset').addEventListener('click', () => {
+  if (!activeCatId) return;
+  const st = canvasState[activeCatId];
+  st.panX = 0; st.panY = 0; st.zoom = 1;
+  applyTransform(activeCatId);
+});
+document.getElementById('ft-organize').addEventListener('click', () => { if (activeCatId) organize(activeCatId); });
+document.getElementById('ft-add-text').addEventListener('click', () => {
+  if (!activeCatId) return;
+  const st = canvasState[activeCatId];
+  st.placingText = true;
+  st.viewportEl.classList.add('placing-text');
+});
+document.getElementById('ft-export').addEventListener('click', () => {
+  [...selected].forEach((id, i) => {
+    const entry = cardIndex[id];
+    if (!entry) return;
+    setTimeout(() => downloadFile(entry.src, entry.src.split('/').pop()), i * 200);
+  });
+});
+
+// ---------- Alt-held drag-to-Finder mode ----------
+// Holding Alt/Option lets the browser's native image-drag (and, in Chrome, the
+// DownloadURL drag type on video) save the file straight to Finder/Desktop/another
+// app, instead of our own click-to-reposition drag on the canvas.
+window.addEventListener('keydown', (e) => { if (e.key === 'Alt') document.body.classList.add('alt-export-mode'); });
+window.addEventListener('keyup', (e) => { if (e.key === 'Alt') document.body.classList.remove('alt-export-mode'); });
+window.addEventListener('blur', () => document.body.classList.remove('alt-export-mode'));
 
 // ---------- Batch select & rate ----------
 const batchBar = document.getElementById('batchBar');
