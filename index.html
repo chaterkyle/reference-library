@@ -667,9 +667,6 @@
   .hover-preview {
     display: none;
     position: fixed;
-    top: 50%;
-    right: 24px;
-    transform: translateY(-50%);
     max-width: 46vw;
     background: rgba(23,23,26,0.95);
     backdrop-filter: blur(16px);
@@ -679,6 +676,7 @@
     box-shadow: 0 20px 50px rgba(0,0,0,0.6);
     z-index: 40;
     pointer-events: none;
+    transition: left 0.12s ease, top 0.12s ease;
   }
   .hover-preview.show { display: block; }
   .hp-media img, .hp-media video {
@@ -920,6 +918,32 @@ function showHoverPreview(c) {
   hpMedia.innerHTML = c.isVideo ? `<video src="${c.src}" muted loop autoplay playsinline></video>` : `<img src="${c.src}" alt="">`;
   hpCap.textContent = c.caption;
   hoverPreviewEl.classList.add('show');
+  positionHoverPreview(c.cardEl);
+}
+
+// Docks the preview beside whichever side of the card has more room, and keeps it
+// vertically centered on the card, clamped so it never runs off-screen. Uses the
+// panel's max-size CSS bounds rather than its real (post-image-load) size, since the
+// actual media dimensions aren't known yet the instant this runs.
+function positionHoverPreview(cardEl) {
+  const cardRect = cardEl.getBoundingClientRect();
+  const margin = 20;
+  const estW = Math.min(window.innerWidth * 0.46, 640) + 28;
+  const estH = Math.min(window.innerHeight * 0.62, 640) + 60;
+  const spaceRight = window.innerWidth - cardRect.right;
+  const spaceLeft = cardRect.left;
+
+  let left;
+  if (spaceRight >= estW + margin || spaceRight >= spaceLeft) {
+    left = Math.min(cardRect.right + margin, window.innerWidth - estW - margin);
+  } else {
+    left = Math.max(cardRect.left - estW - margin, margin);
+  }
+  let top = cardRect.top + cardRect.height / 2 - estH / 2;
+  top = Math.max(margin, Math.min(top, window.innerHeight - estH - margin));
+
+  hoverPreviewEl.style.left = left + 'px';
+  hoverPreviewEl.style.top = top + 'px';
 }
 function hideHoverPreview() {
   hoverPreviewEl.classList.remove('show');
