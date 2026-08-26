@@ -18,6 +18,7 @@
     --star-off: #3a3a3f;
   }
   * { box-sizing: border-box; }
+  .icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
   body {
     margin: 0;
     background: var(--bg);
@@ -644,13 +645,70 @@
   }
   #lightbox.open { display: flex; }
   #lightbox img, #lightbox video {
-    max-width: 100%;
-    max-height: 74vh;
+    max-width: 94vw;
+    max-height: 88vh;
     object-fit: contain;
     border-radius: 4px;
   }
   #lightbox .cap { color: var(--text); margin-top: 16px; max-width: 700px; text-align: center; font-size: 14px; }
+  #lightbox .cap-link {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    color: var(--accent);
+    font-size: 12.5px;
+    text-decoration: none;
+  }
+  #lightbox .cap-link.show { display: flex; }
+  #lightbox .cap-link:hover { text-decoration: underline; }
   #lightbox .close { position: absolute; top: 24px; right: 32px; color: var(--muted); font-size: 28px; cursor: pointer; }
+
+  .hover-preview {
+    display: none;
+    position: fixed;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+    max-width: 46vw;
+    background: rgba(23,23,26,0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    z-index: 40;
+    pointer-events: none;
+  }
+  .hover-preview.show { display: block; }
+  .hp-media img, .hp-media video {
+    display: block;
+    max-width: min(44vw, 640px);
+    max-height: 62vh;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    object-fit: contain;
+    margin: 0 auto;
+    background: #000;
+  }
+  .hp-cap { color: var(--muted); font-size: 12.5px; margin-top: 10px; max-width: min(44vw, 640px); text-align: center; }
+
+  .minimap-panel {
+    display: none;
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    z-index: 22;
+    background: rgba(23,23,26,0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .minimap-panel.show { display: block; }
+  #minimapCanvas { display: block; cursor: pointer; border-radius: 6px; }
 
   #batchBar {
     display: none;
@@ -686,12 +744,12 @@
 <body>
 
 <header>
-  <nav id="catnav"><a href="#" id="homeLink">🏠 Home</a></nav>
+  <nav id="catnav"><a href="#" id="homeLink"><span id="homeIcon"></span> Home</a></nav>
   <span class="crumb" id="crumb"></span>
 </header>
 
 <div class="global-search">
-  <span class="gs-icon">✦</span>
+  <span class="gs-icon" id="gsIcon"></span>
   <div class="search-wrap">
     <div class="search-ghost" id="searchGhost"><span class="typed"></span><span class="suggest"></span></div>
     <input type="text" id="globalSearch" placeholder="Search styles, categories, captions… ( / )" autocomplete="off" spellcheck="false">
@@ -711,11 +769,11 @@
     <button id="ft-zoom-out" title="Zoom out">−</button>
     <span class="zoom-level" id="ft-zoom-level">100%</span>
     <button id="ft-zoom-in" title="Zoom in">+</button>
-    <button id="ft-zoom-reset" title="Reset view">⤢</button>
+    <button id="ft-zoom-reset" title="Reset view"><span id="ftMaximizeIcon"></span></button>
   </div>
   <div class="ft-divider"></div>
   <div class="ft-group">
-    <button id="ft-organize" title="Organize into a grid">▦</button>
+    <button id="ft-organize" title="Organize into a grid"><span id="ftGridIcon"></span></button>
     <button id="ft-add-text" title="Add text label">T</button>
   </div>
   <div class="ft-divider"></div>
@@ -737,9 +795,19 @@
 </div>
 
 <div id="lightbox">
-  <span class="close">&times;</span>
+  <span class="close" id="lightboxClose"></span>
   <div id="lightbox-media"></div>
   <div class="cap" id="lightbox-cap"></div>
+  <a class="cap-link" id="lightbox-link" target="_blank" rel="noopener"></a>
+</div>
+
+<div class="hover-preview" id="hoverPreview">
+  <div class="hp-media" id="hpMedia"></div>
+  <div class="hp-cap" id="hpCap"></div>
+</div>
+
+<div class="minimap-panel" id="minimapPanel">
+  <canvas id="minimapCanvas" width="180" height="130"></canvas>
 </div>
 
 <div id="batchBar">
@@ -757,11 +825,112 @@ const RATINGS_API = "https://reference-library-ratings.image-ref.workers.dev/rat
 const AUTH_KEY = "kyle-ref-lib-2026";
 const GRID_SNAP = 20; // px, world-space snapping grid while dragging
 
+// ---------- Icons (inline SVG, subdued line-icon style — no emoji, no external font/CDN) ----------
+const ICON_ATTRS = 'class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
+const ICONS = {
+  home: `<svg ${ICON_ATTRS}><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h5v-6h2v6h5v-9"/></svg>`,
+  camera: `<svg ${ICON_ATTRS}><path d="M4 8h2l1.4-1.8A1 1 0 0 1 8.2 5.6h7.6a1 1 0 0 1 .8.4L18 8h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.3"/></svg>`,
+  video: `<svg ${ICON_ATTRS}><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9.3v5.4l4.7-2.7z" fill="currentColor" stroke="none"/></svg>`,
+  layers: `<svg ${ICON_ATTRS}><path d="M12 3 21 8l-9 5-9-5Z"/><path d="M3 13l9 5 9-5"/></svg>`,
+  sparkles: `<svg ${ICON_ATTRS}><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/><path d="m6 6 3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/></svg>`,
+  globe: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.5 7.5h13M5.5 16.5h13"/></svg>`,
+  image: `<svg ${ICON_ATTRS}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="m4.5 17 5-5 3.2 3.2L17 11l3 3.5"/></svg>`,
+  folder: `<svg ${ICON_ATTRS}><path d="M3 6.5a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>`,
+  download: `<svg ${ICON_ATTRS}><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>`,
+  link: `<svg ${ICON_ATTRS}><path d="M9.5 14.5 14.5 9.5M10.5 6.5l.8-.8a3.5 3.5 0 0 1 5 5l-.8.8M13.5 17.5l-.8.8a3.5 3.5 0 0 1-5-5l.8-.8"/></svg>`,
+  maximize: `<svg ${ICON_ATTRS}><path d="M8 3H4v4M16 3h4v4M8 21H4v-4M16 21h4v-4"/></svg>`,
+  grid: `<svg ${ICON_ATTRS}><rect x="3" y="3" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1"/></svg>`,
+  check: `<svg ${ICON_ATTRS}><path d="M4 12.5 9.5 18 20 6"/></svg>`,
+  x: `<svg ${ICON_ATTRS}><path d="M5 5l14 14M19 5 5 19"/></svg>`,
+};
+
+document.getElementById('gsIcon').innerHTML = ICONS.sparkles;
+document.getElementById('ftMaximizeIcon').innerHTML = ICONS.maximize;
+document.getElementById('ftGridIcon').innerHTML = ICONS.grid;
+document.getElementById('lightboxClose').innerHTML = ICONS.x;
+
+// ---------- Minimap ----------
+const MINIMAP_W = 180, MINIMAP_H = 130;
+const minimapPanel = document.getElementById('minimapPanel');
+const minimapCanvas = document.getElementById('minimapCanvas');
+const minimapCtx = minimapCanvas.getContext('2d');
+
+function minimapScale() {
+  const st = canvasState[activeCatId];
+  const scale = Math.min(MINIMAP_W / st.worldW, MINIMAP_H / st.worldH);
+  return { st, scale, offX: (MINIMAP_W - st.worldW * scale) / 2, offY: (MINIMAP_H - st.worldH * scale) / 2 };
+}
+
+function updateMinimap() {
+  if (!activeCatId) { minimapPanel.classList.remove('show'); return; }
+  minimapPanel.classList.add('show');
+  const { st, scale, offX, offY } = minimapScale();
+
+  minimapCtx.clearRect(0, 0, MINIMAP_W, MINIMAP_H);
+  minimapCtx.fillStyle = 'rgba(255,255,255,0.04)';
+  minimapCtx.fillRect(offX, offY, st.worldW * scale, st.worldH * scale);
+
+  Object.values(groups).forEach(g => {
+    if (g.deleted || g.catId !== activeCatId) return;
+    minimapCtx.fillStyle = hexToRgba(g.color || '#7c9cff', 0.25);
+    minimapCtx.fillRect(offX + g.x * scale, offY + g.y * scale, g.w * scale, g.h * scale);
+  });
+
+  minimapCtx.fillStyle = 'rgba(234,234,236,0.6)';
+  Object.values(cardIndex).forEach(c => {
+    if (c.cardEl.dataset.cat !== activeCatId || c.cardEl.style.display === 'none') return;
+    const x = parseFloat(c.cardEl.style.left), y = parseFloat(c.cardEl.style.top);
+    minimapCtx.fillRect(offX + x * scale, offY + y * scale, 3, 3);
+  });
+
+  const vpRect = st.viewportEl.getBoundingClientRect();
+  const viewX = -st.panX / st.zoom, viewY = -st.panY / st.zoom;
+  const viewW = vpRect.width / st.zoom, viewH = vpRect.height / st.zoom;
+  minimapCtx.strokeStyle = '#7c9cff';
+  minimapCtx.lineWidth = 1.5;
+  minimapCtx.strokeRect(offX + viewX * scale, offY + viewY * scale, viewW * scale, viewH * scale);
+}
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+minimapCanvas.addEventListener('click', (e) => {
+  if (!activeCatId) return;
+  const { st, scale, offX, offY } = minimapScale();
+  const rect = minimapCanvas.getBoundingClientRect();
+  const worldX = (e.clientX - rect.left - offX) / scale;
+  const worldY = (e.clientY - rect.top - offY) / scale;
+  const vpRect = st.viewportEl.getBoundingClientRect();
+  st.panX = vpRect.width / 2 - worldX * st.zoom;
+  st.panY = vpRect.height / 2 - worldY * st.zoom;
+  applyTransform(activeCatId);
+});
+
+// ---------- Big hover preview ----------
+let hoverPreviewTimer = null;
+const hoverPreviewEl = document.getElementById('hoverPreview');
+const hpMedia = document.getElementById('hpMedia');
+const hpCap = document.getElementById('hpCap');
+
+function showHoverPreview(c) {
+  if (!c) return;
+  hpMedia.innerHTML = c.isVideo ? `<video src="${c.src}" muted loop autoplay playsinline></video>` : `<img src="${c.src}" alt="">`;
+  hpCap.textContent = c.caption;
+  hoverPreviewEl.classList.add('show');
+}
+function hideHoverPreview() {
+  hoverPreviewEl.classList.remove('show');
+  hpMedia.innerHTML = '';
+}
+
 // ---------- Content ----------
 const CATEGORIES = [
   {
     id: "cinematography",
-    emoji: "📽️",
+    icon: "camera",
     title: "Cinematography",
     desc: "Real footage only — no CG, animation, or illustration.",
     subs: [
@@ -786,7 +955,7 @@ const CATEGORIES = [
   },
   {
     id: "motion-camera",
-    emoji: "🎬",
+    icon: "video",
     title: "Motion & Camera Movement",
     desc: "GIFs/MP4s preferred — motion doesn't read in a still.",
     subs: [
@@ -811,7 +980,7 @@ const CATEGORIES = [
   },
   {
     id: "motion-design",
-    emoji: "🎨",
+    icon: "layers",
     title: "Motion Design",
     desc: "Style reference, organized by discipline.",
     subs: [
@@ -861,7 +1030,7 @@ const CATEGORIES = [
   },
   {
     id: "ai-gen",
-    emoji: "🤖",
+    icon: "sparkles",
     title: "AI-Gen Reference",
     desc: null,
     images: [
@@ -880,7 +1049,7 @@ const CATEGORIES = [
   },
   {
     id: "inspiration-sites",
-    emoji: "🌐",
+    icon: "globe",
     title: "Saved from Inspiration Sites",
     desc: null,
     images: [
@@ -903,9 +1072,9 @@ const CATEGORIES = [
 const DEST_OPTIONS = [];
 CATEGORIES.forEach(cat => {
   if (cat.subs) {
-    cat.subs.forEach(sub => DEST_OPTIONS.push({ value: `${cat.id}__${sub.id}`, label: `${cat.emoji} ${cat.title} › ${sub.title}` }));
+    cat.subs.forEach(sub => DEST_OPTIONS.push({ value: `${cat.id}__${sub.id}`, label: `${cat.title} › ${sub.title}` }));
   } else {
-    DEST_OPTIONS.push({ value: `${cat.id}__` + "_", label: `${cat.emoji} ${cat.title}` });
+    DEST_OPTIONS.push({ value: `${cat.id}__` + "_", label: cat.title });
   }
 });
 
@@ -931,11 +1100,11 @@ function snap(v) { return Math.round(v / GRID_SNAP) * GRID_SNAP; }
 function buildSearchIndex() {
   const items = [];
   CATEGORIES.forEach(cat => {
-    items.push({ kind: 'category', title: cat.title, label: `${cat.emoji} ${cat.title}`, catId: cat.id });
+    items.push({ kind: 'category', title: cat.title, label: cat.title, catId: cat.id });
     const groupsArr = cat.subs || [{ id: null, title: null, folder: cat.folder, images: cat.images }];
     groupsArr.forEach(g => {
       if (g.title) {
-        items.push({ kind: 'sub', title: g.title, label: `${cat.emoji} ${cat.title} › ${g.title}`, catId: cat.id, subId: g.id });
+        items.push({ kind: 'sub', title: g.title, label: `${cat.title} › ${g.title}`, catId: cat.id, subId: g.id });
       }
       g.images.forEach(img => {
         items.push({
@@ -945,7 +1114,7 @@ function buildSearchIndex() {
           catId: cat.id,
           subId: g.id,
           imageId: imageId(cat.id, g.id, img.file),
-          breadcrumb: `${cat.emoji} ${cat.title}${g.title ? ' › ' + g.title : ''}`,
+          breadcrumb: `${cat.title}${g.title ? ' › ' + g.title : ''}`,
         });
       });
     });
@@ -1008,6 +1177,7 @@ function previewThumbs(cat) {
   return thumbs;
 }
 
+document.getElementById('homeIcon').innerHTML = ICONS.home;
 document.getElementById('homeLink').addEventListener('click', (e) => { e.preventDefault(); showHome(); });
 
 CATEGORIES.forEach(cat => {
@@ -1019,10 +1189,10 @@ CATEGORIES.forEach(cat => {
     <div class="tile-preview">
       ${thumbs.length
         ? thumbs.map((src, i) => `<img class="p${i + 1}" src="${src}" loading="lazy" alt="">`).join('')
-        : `<div class="p-empty">${cat.emoji}</div>`}
+        : `<div class="p-empty">${ICONS[cat.icon]}</div>`}
     </div>
     <div class="tile-body">
-      <h3>${cat.emoji} ${cat.title}</h3>
+      <h3>${ICONS[cat.icon]} ${cat.title}</h3>
       <p class="tile-count">${totalImageCount(cat)} images</p>
       <p class="tile-desc">${cat.desc || ''}</p>
     </div>
@@ -1101,6 +1271,16 @@ CATEGORIES.forEach(cat => {
         });
       }
 
+      // Big hover preview (after a short delay, so scanning across many cards doesn't spam it)
+      fig.addEventListener('mouseenter', () => {
+        clearTimeout(hoverPreviewTimer);
+        hoverPreviewTimer = setTimeout(() => showHoverPreview(cardIndex[id]), 280);
+      });
+      fig.addEventListener('mouseleave', () => {
+        clearTimeout(hoverPreviewTimer);
+        hideHoverPreview();
+      });
+
       const checkEl = document.createElement('div');
       checkEl.className = 'select-check';
       checkEl.title = 'Select for batch rating';
@@ -1110,7 +1290,7 @@ CATEGORIES.forEach(cat => {
 
       const deleteEl = document.createElement('div');
       deleteEl.className = 'delete-x';
-      deleteEl.textContent = '✕';
+      deleteEl.innerHTML = ICONS.x;
       deleteEl.title = 'Remove from library';
       deleteEl.addEventListener('mousedown', (e) => e.stopPropagation());
       deleteEl.addEventListener('click', (e) => { e.stopPropagation(); deleteImage(id); });
@@ -1118,7 +1298,7 @@ CATEGORIES.forEach(cat => {
 
       const downloadEl = document.createElement('div');
       downloadEl.className = 'download-btn';
-      downloadEl.textContent = '⬇';
+      downloadEl.innerHTML = ICONS.download;
       downloadEl.title = 'Download file';
       downloadEl.addEventListener('mousedown', (e) => e.stopPropagation());
       downloadEl.addEventListener('click', (e) => { e.stopPropagation(); downloadFile(src, img.file); });
@@ -1168,12 +1348,12 @@ CATEGORIES.forEach(cat => {
       });
 
       world.appendChild(fig);
-      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, src, caption: img.caption, isVideo: isVideo(img.file) };
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, src, caption: img.caption, isVideo: isVideo(img.file), url: img.url || null };
     });
   });
 
   categoriesWrap.appendChild(catEl);
-  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world, placingText: false };
+  canvasState[cat.id] = { panX: 0, panY: 0, zoom: 1, viewportEl: viewport, worldEl: world, placingText: false, worldW: layout.worldW, worldH: layout.worldH };
   initCanvasInteractions(cat.id);
 });
 
@@ -1185,6 +1365,8 @@ function showHome() {
   document.querySelectorAll('.category').forEach(el => el.classList.remove('active'));
   document.getElementById('crumb').textContent = '';
   document.getElementById('floatingToolbar').classList.remove('open');
+  hideHoverPreview();
+  updateMinimap();
   history.replaceState(null, '', '#');
 }
 function showCategory(id) {
@@ -1192,8 +1374,10 @@ function showCategory(id) {
   document.getElementById('home').style.display = 'none';
   document.querySelectorAll('.category').forEach(el => el.classList.toggle('active', el.id === id));
   const cat = CATEGORIES.find(c => c.id === id);
-  document.getElementById('crumb').textContent = cat ? `›  ${cat.emoji} ${cat.title}` : '';
+  document.getElementById('crumb').innerHTML = cat ? `›  ${ICONS[cat.icon]} ${cat.title}` : '';
   document.getElementById('floatingToolbar').classList.add('open');
+  hideHoverPreview();
+  updateMinimap();
   history.replaceState(null, '', `#${id}`);
 }
 if (location.hash && document.getElementById(location.hash.slice(1))) {
@@ -1207,6 +1391,7 @@ function applyTransform(catId) {
   st.worldEl.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.zoom})`;
   if (catId === activeCatId) {
     document.getElementById('ft-zoom-level').textContent = Math.round(st.zoom * 100) + '%';
+    updateMinimap();
   }
 }
 
@@ -1412,13 +1597,14 @@ function initCanvasInteractions(catId) {
       }
     } else if (dragKind === 'card') {
       const c = cardIndex[id];
-      if (c) openLightbox(c.src, c.caption, c.isVideo);
+      if (c) openLightbox(c.src, c.caption, c.isVideo, c.url);
     } else if (dragKind === 'annotation') {
       annotationIndex[id].textEl.focus();
     } else if (dragKind === 'group') {
       groupIndex[id].titleEl.focus();
     }
     dragEl = null; dragKind = null; dragMembers = [];
+    updateMinimap();
   });
 
   // Resizing a card — drag its corner handle to change width; height follows via the
@@ -1480,10 +1666,18 @@ function organize(catId) {
 const lightbox = document.getElementById('lightbox');
 const lightboxMedia = document.getElementById('lightbox-media');
 const lightboxCap = document.getElementById('lightbox-cap');
+const lightboxLink = document.getElementById('lightbox-link');
 
-function openLightbox(src, cap, video) {
+function openLightbox(src, cap, video, url) {
   lightboxMedia.innerHTML = video ? `<video src="${src}" controls autoplay loop></video>` : `<img src="${src}" alt="">`;
   lightboxCap.textContent = cap;
+  if (url) {
+    lightboxLink.href = url;
+    lightboxLink.innerHTML = `${ICONS.link} View source`;
+    lightboxLink.classList.add('show');
+  } else {
+    lightboxLink.classList.remove('show');
+  }
   lightbox.classList.add('open');
 }
 lightbox.addEventListener('click', (e) => {
@@ -1527,6 +1721,7 @@ async function fetchRatings() {
     }
   });
   updateTileCounts();
+  updateMinimap();
 }
 
 function updateTileCounts() {
@@ -1574,7 +1769,7 @@ function renderAnnotationEl(id, rec, world) {
   });
   const del = document.createElement('button');
   del.className = 'del';
-  del.textContent = '✕';
+  del.innerHTML = ICONS.x;
   del.addEventListener('click', () => {
     persistAnnotation(id, { deleted: true });
     wrap.remove();
@@ -1644,6 +1839,7 @@ async function fetchGroups() {
     const world = canvasState[rec.catId] && canvasState[rec.catId].worldEl;
     if (world) renderGroupEl(id, rec, world);
   });
+  updateMinimap();
 }
 
 function applyGroupColor(box, color) {
@@ -1694,11 +1890,12 @@ function renderGroupEl(id, rec, world) {
   });
   const del = document.createElement('button');
   del.className = 'del';
-  del.textContent = '✕';
+  del.innerHTML = ICONS.x;
   del.addEventListener('click', () => {
     persistGroup(id, { deleted: true });
     box.remove();
     delete groupIndex[id];
+    updateMinimap();
   });
   toolbar.appendChild(del);
   titlebar.appendChild(toolbar);
@@ -1731,6 +1928,7 @@ function createGroupAt(catId, x, y, w, h, title, color) {
   const world = canvasState[catId].worldEl;
   renderGroupEl(id, rec, world);
   persistGroup(id, {});
+  updateMinimap();
   return id;
 }
 
@@ -1930,6 +2128,7 @@ function removeCard(id) {
   selected.delete(id);
   updateBatchBar();
   updateTileCounts();
+  updateMinimap();
 }
 
 async function deleteImage(id) {
@@ -2005,6 +2204,8 @@ function openCardContextMenu(clientX, clientY, id, catId, groupId) {
 
 window.addEventListener('mousedown', (e) => {
   if (!e.target.closest('.context-menu')) closeContextMenu();
+  clearTimeout(hoverPreviewTimer);
+  hideHoverPreview();
 });
 window.addEventListener('contextmenu', (e) => {
   if (!e.target.closest('figure.card')) closeContextMenu();
@@ -2056,7 +2257,7 @@ function toggleSelect(id) {
   if (!cardIndex[id]) return;
   if (selected.has(id)) selected.delete(id); else selected.add(id);
   cardIndex[id].cardEl.classList.toggle('selected', selected.has(id));
-  cardIndex[id].checkEl.textContent = selected.has(id) ? '✓' : '';
+  cardIndex[id].checkEl.innerHTML = selected.has(id) ? ICONS.check : '';
   updateBatchBar();
 }
 function updateBatchBar() {
@@ -2065,7 +2266,7 @@ function updateBatchBar() {
 }
 function clearSelection() {
   selected.forEach(id => {
-    if (cardIndex[id]) { cardIndex[id].cardEl.classList.remove('selected'); cardIndex[id].checkEl.textContent = ''; }
+    if (cardIndex[id]) { cardIndex[id].cardEl.classList.remove('selected'); cardIndex[id].checkEl.innerHTML = ''; }
   });
   selected.clear();
   updateBatchBar();
@@ -2128,9 +2329,9 @@ function renderSearchDropdown(items) {
     const row = document.createElement('div');
     row.className = 'search-row';
     if (item.kind === 'image') {
-      row.innerHTML = `<span class="sr-thumb-icon">🖼️</span><div class="sr-text"><div class="sr-title">${item.title}</div><div class="sr-sub">${item.breadcrumb}</div></div>`;
+      row.innerHTML = `<span class="sr-thumb-icon">${ICONS.image}</span><div class="sr-text"><div class="sr-title">${item.title}</div><div class="sr-sub">${item.breadcrumb}</div></div>`;
     } else {
-      row.innerHTML = `<span class="sr-thumb-icon">${item.kind === 'category' ? '📁' : '📂'}</span><div class="sr-text"><div class="sr-title">${item.label}</div></div>`;
+      row.innerHTML = `<span class="sr-thumb-icon">${ICONS.folder}</span><div class="sr-text"><div class="sr-title">${item.label}</div></div>`;
     }
     row.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus so the click isn't lost to the input's blur
     row.addEventListener('click', () => goToSearchResult(item));
