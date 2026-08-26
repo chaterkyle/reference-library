@@ -54,55 +54,90 @@
 
   main { padding: 0 24px 100px; }
 
-  #home { margin-top: 20px; }
+  #home {
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    background:
+      radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px) 0 0 / 28px 28px,
+      var(--bg);
+  }
+  .launchpad-inner { max-width: 1240px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+  .launchpad-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 20px; text-align: center; }
+  @keyframes tileFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
   .tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 26px;
   }
   .category-tile {
+    --tile-color: #7c9cff;
+    position: relative;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 18px;
     padding: 0;
     cursor: pointer;
     overflow: hidden;
-    transition: border-color 0.15s ease, transform 0.15s ease;
+    animation: tileFloat 6s ease-in-out infinite;
+    box-shadow: 0 0 0 1px transparent, 0 20px 40px rgba(0,0,0,0.35);
+    transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   }
-  .category-tile:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .category-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--tile-color), transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .category-tile:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: var(--tile-color);
+    box-shadow: 0 0 0 1px var(--tile-color), 0 24px 60px rgba(0,0,0,0.5), 0 0 40px -8px var(--tile-color);
+  }
 
   .tile-preview {
     position: relative;
-    height: 140px;
+    height: 160px;
     background: var(--canvas-bg);
     overflow: hidden;
   }
   .tile-preview img {
     position: absolute;
-    width: 110px;
-    height: 110px;
+    width: 120px;
+    height: 120px;
     object-fit: cover;
     border-radius: 8px;
     border: 2px solid var(--panel);
     box-shadow: 0 6px 16px rgba(0,0,0,0.4);
   }
-  .tile-preview .p1 { left: 14px; top: 18px; transform: rotate(-6deg); z-index: 1; }
-  .tile-preview .p2 { left: 78px; top: 8px; transform: rotate(3deg); z-index: 2; }
-  .tile-preview .p3 { left: 142px; top: 20px; transform: rotate(-2deg); z-index: 1; }
+  .tile-preview .p1 { left: 14px; top: 20px; transform: rotate(-6deg); z-index: 1; }
+  .tile-preview .p2 { left: 84px; top: 8px; transform: rotate(3deg); z-index: 2; }
+  .tile-preview .p3 { left: 154px; top: 22px; transform: rotate(-2deg); z-index: 1; }
   .tile-preview .p-empty {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 40px;
-    opacity: 0.25;
+    font-size: 46px;
+    color: var(--tile-color);
+    opacity: 0.4;
   }
 
-  .tile-body { padding: 14px 18px 18px; }
-  .category-tile h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-  .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
-  .category-tile .tile-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; margin: 0; }
+  .tile-body { padding: 16px 20px 20px; }
+  .category-tile h3 { margin: 0 0 4px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tile-color); }
+  .category-tile .tile-count { font-size: 12px; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .category-tile .tile-desc { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 0; }
 
 
   .floating-toolbar {
@@ -641,6 +676,34 @@
     opacity: 0.7;
   }
   .group-resize-handle:hover { opacity: 1; border-color: var(--accent); }
+
+  .folder-chip {
+    position: absolute;
+    left: 24px;
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .folder-chip:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .folder-chip .icon { font-size: 18px; color: var(--accent); }
+  .folder-chip-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .folder-chip-count { font-size: 11px; color: var(--muted); }
+
+  .group-collapse-btn {
+    width: 15px; height: 15px; border-radius: 4px; cursor: pointer;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .group-collapse-btn:hover { color: var(--text); border-color: var(--accent); }
   .group-titlebar {
     position: absolute;
     top: -38px;
@@ -878,7 +941,10 @@
 
 <main>
   <div id="home">
-    <div class="tile-grid" id="tileGrid"></div>
+    <div class="launchpad-inner">
+      <p class="launchpad-title">Reference Library</p>
+      <div class="tile-grid" id="tileGrid"></div>
+    </div>
   </div>
   <div id="categoriesWrap"></div>
 </main>
@@ -1004,8 +1070,9 @@ function updateMinimap() {
   minimapCtx.fillStyle = 'rgba(255,255,255,0.04)';
   minimapCtx.fillRect(offX, offY, st.worldW * scale, st.worldH * scale);
 
-  Object.values(groups).forEach(g => {
+  Object.entries(groups).forEach(([id, g]) => {
     if (g.deleted) return;
+    if (groupIndex[id] && groupIndex[id].el.style.display === 'none') return; // tucked-away folder
     minimapCtx.fillStyle = hexToRgba(g.color || '#7c9cff', 0.25);
     minimapCtx.fillRect(offX + g.x * scale, offY + g.y * scale, g.w * scale, g.h * scale);
   });
@@ -1194,6 +1261,7 @@ const CATEGORIES = [
     id: "ordinary-folk",
     icon: "video",
     title: "Ordinary Folk",
+    parent: "motion-design",
     desc: "Studio reel breakdown -- real technique clips, mostly trimmed from ordinaryfolk.co's own site.",
     images: [
           { file: "ordinary-folk-001-creation-cosmic-vortex-to-figure.mp4", caption: "'Creation' title piece: swirling cosmic/galaxy vortex morphs into a colorful abstract wave-gradient shape, then resolves into a warm illustrated reclining figure -- three-stage shape-to-scene morph transition.", url: "https://cdn.prod.website-files.com/63c8ac820bec5c25b5b58292/65d50de1bf4f1101d4f300a2_OF_Creation_FineCut-Square-transcode.mp4" },
@@ -1507,6 +1575,14 @@ const CLUSTER_GAP_X = 120;
 const CLUSTER_WRAP_WIDTH = 6000;
 const CLUSTER_LAYOUTS = {};
 const CLUSTER_ORIGINS = {};
+const CATEGORY_GROUP_COLORS = {
+  cinematography: '#7c9cff',
+  'motion-camera': '#f5c542',
+  'motion-design': '#e06b6b',
+  'ordinary-folk': '#6bd48a',
+  'ai-gen': '#c77dff',
+  'inspiration-sites': '#4fd1c5',
+};
 (function computeClusterOrigins() {
   let cursorX = 0, cursorY = 0, rowH = 0;
   CATEGORIES.forEach(cat => {
@@ -1564,24 +1640,30 @@ categoriesWrap.appendChild(mainViewport);
 let worldMaxX = 0, worldMaxY = 0;
 
 CATEGORIES.forEach(cat => {
-  const thumbs = previewThumbs(cat);
-  const tile = document.createElement('div');
-  tile.className = 'category-tile';
-  tile.dataset.cat = cat.id;
-  tile.innerHTML = `
-    <div class="tile-preview">
-      ${thumbs.length
-        ? thumbs.map((src, i) => `<img class="p${i + 1}" src="${src}" loading="lazy" alt="">`).join('')
-        : `<div class="p-empty">${ICONS[cat.icon]}</div>`}
-    </div>
-    <div class="tile-body">
-      <h3>${ICONS[cat.icon]} ${cat.title}</h3>
-      <p class="tile-count">${totalImageCount(cat)} images</p>
-      <p class="tile-desc">${cat.desc || ''}</p>
-    </div>
-  `;
-  tile.addEventListener('click', () => showCategory(cat.id));
-  tileGrid.appendChild(tile);
+  // Child categories (folders tucked inside a parent group) don't get their own launchpad
+  // tile -- they're reached via their folder chip on the canvas, or via search.
+  if (!cat.parent) {
+    const thumbs = previewThumbs(cat);
+    const tile = document.createElement('div');
+    tile.className = 'category-tile';
+    tile.dataset.cat = cat.id;
+    tile.style.setProperty('--tile-color', CATEGORY_GROUP_COLORS[cat.id] || '#7c9cff');
+    tile.style.animationDelay = (-(Math.random() * 6)).toFixed(2) + 's';
+    tile.innerHTML = `
+      <div class="tile-preview">
+        ${thumbs.length
+          ? thumbs.map((src, i) => `<img class="p${i + 1}" src="${src}" loading="lazy" alt="">`).join('')
+          : `<div class="p-empty">${ICONS[cat.icon]}</div>`}
+      </div>
+      <div class="tile-body">
+        <h3>${ICONS[cat.icon]} ${cat.title}</h3>
+        <p class="tile-count">${totalImageCount(cat)} images</p>
+        <p class="tile-desc">${cat.desc || ''}</p>
+      </div>
+    `;
+    tile.addEventListener('click', () => showCategory(cat.id));
+    tileGrid.appendChild(tile);
+  }
 
   const origin = CLUSTER_ORIGINS[cat.id];
   const layout = CLUSTER_LAYOUTS[cat.id];
@@ -1591,6 +1673,7 @@ CATEGORIES.forEach(cat => {
   layout.zones.forEach(z => {
     const el = document.createElement('div');
     el.className = 'zone-label';
+    el.dataset.cat = cat.id;
     el.style.left = (origin.x + z.x) + 'px';
     el.style.top = (origin.y + z.y) + 'px';
     el.innerHTML = `${z.label} <span class="zone-count">${z.count} images</span>`;
@@ -1604,6 +1687,7 @@ CATEGORIES.forEach(cat => {
       const relPos = layout.positions[key];
       const empty = document.createElement('div');
       empty.className = 'empty-state';
+      empty.dataset.cat = cat.id;
       empty.style.left = (origin.x + relPos.x) + 'px';
       empty.style.top = (origin.y + relPos.y) + 'px';
       empty.textContent = 'No images yet — pending sourcing.';
@@ -1754,6 +1838,7 @@ initCanvasInteractions(MAIN);
 // since there's only one canvas (MAIN) now. Home is a lightweight overview overlay on
 // top of that single canvas, not a separate page.
 let activeCatId = null;
+const collapsedFolders = new Set(CATEGORIES.filter(c => c.parent).map(c => c.id));
 function showHome() {
   activeCatId = null;
   document.getElementById('home').style.display = 'block';
@@ -1766,6 +1851,10 @@ function showHome() {
 }
 function showCategory(id) {
   activeCatId = id;
+  if (collapsedFolders.has(id)) {
+    collapsedFolders.delete(id);
+    setCategoryVisible(id, true);
+  }
   document.getElementById('home').style.display = 'none';
   document.getElementById('mainViewport').style.display = 'block';
   const cat = CATEGORIES.find(c => c.id === id);
@@ -2376,15 +2465,6 @@ async function fetchGroups() {
   updateMinimap();
 }
 
-const CATEGORY_GROUP_COLORS = {
-  cinematography: '#7c9cff',
-  'motion-camera': '#f5c542',
-  'motion-design': '#e06b6b',
-  'ordinary-folk': '#6bd48a',
-  'ai-gen': '#c77dff',
-  'inspiration-sites': '#4fd1c5',
-};
-
 // Wraps every category's cluster in a persisted Group box the first time it's ever seen
 // (stable, deterministic id -- see stableGroupId), so reloading doesn't create duplicates and
 // any later manual resize/recolor/rename by dragging the group sticks across sessions.
@@ -2410,6 +2490,60 @@ async function ensureCategoryGroups() {
     renderGroupEl(gid, rec, worldEl);
     persistGroup(gid, {});
   }
+  updateMinimap();
+}
+
+// ---------- Folders: nest a category as a tucked-away "subgroup" inside a parent category ----------
+// Cards/zone-labels/the group box all stay exactly where they already live in the shared
+// world -- collapsing just hides them (display:none), so nothing needs repositioning. The
+// folder chip on the parent's group is a portal: opening it reveals + flies to wherever the
+// child's content already sits.
+function setCategoryVisible(catId, visible) {
+  const display = visible ? '' : 'none';
+  Object.values(cardIndex).forEach(c => { if (c.catId === catId) c.cardEl.style.display = display; });
+  document.querySelectorAll(`.zone-label[data-cat="${catId}"], .empty-state[data-cat="${catId}"]`).forEach(el => {
+    el.style.display = display;
+  });
+  const gid = stableGroupId(catId);
+  if (groupIndex[gid]) groupIndex[gid].el.style.display = display;
+}
+
+// Keeps the minimap's overall scale honest: a huge collapsed cluster (Ordinary Folk is
+// ~16,000px tall) shouldn't leave everything else squeezed into a corner of an oversized,
+// mostly-empty frame just because that region is hidden right now.
+function recomputeWorldBounds() {
+  let maxX = 0, maxY = 0;
+  Object.values(cardIndex).forEach(c => {
+    if (c.cardEl.style.display === 'none') return;
+    maxX = Math.max(maxX, parseFloat(c.cardEl.style.left) + c.cardEl.offsetWidth);
+    maxY = Math.max(maxY, parseFloat(c.cardEl.style.top) + c.cardEl.offsetHeight);
+  });
+  canvasState[MAIN].worldW = maxX + 400;
+  canvasState[MAIN].worldH = maxY + 400;
+}
+
+function toggleFolder(catId) {
+  const wasCollapsed = collapsedFolders.has(catId);
+  if (wasCollapsed) collapsedFolders.delete(catId); else collapsedFolders.add(catId);
+  setCategoryVisible(catId, wasCollapsed);
+  recomputeWorldBounds();
+  updateMinimap();
+  if (wasCollapsed) showCategory(catId); // reveal + fly there
+}
+
+function setupFolders() {
+  CATEGORIES.filter(c => c.parent).forEach(child => {
+    setCategoryVisible(child.id, false);
+    const parentGroupEl = groupIndex[stableGroupId(child.parent)] && groupIndex[stableGroupId(child.parent)].el;
+    if (!parentGroupEl) return;
+    const chip = document.createElement('div');
+    chip.className = 'folder-chip';
+    chip.innerHTML = `<span class="icon">${ICONS.folder}</span><span class="folder-chip-title">${child.title}</span><span class="folder-chip-count">${totalImageCount(child)} items</span>`;
+    chip.addEventListener('mousedown', (e) => e.stopPropagation());
+    chip.addEventListener('click', (e) => { e.stopPropagation(); toggleFolder(child.id); });
+    parentGroupEl.appendChild(chip);
+  });
+  recomputeWorldBounds();
   updateMinimap();
 }
 
@@ -2459,6 +2593,16 @@ function renderGroupEl(id, rec, world) {
     });
     toolbar.appendChild(sw);
   });
+  const ownerCat = CATEGORIES.find(c => stableGroupId(c.id) === id);
+  if (ownerCat && ownerCat.parent) {
+    const parentCat = CATEGORIES.find(c => c.id === ownerCat.parent);
+    const collapseBtn = document.createElement('button');
+    collapseBtn.className = 'group-collapse-btn';
+    collapseBtn.innerHTML = ICONS.folder;
+    collapseBtn.title = parentCat ? `Tuck back into ${parentCat.title}` : 'Tuck back into folder';
+    collapseBtn.addEventListener('click', () => toggleFolder(ownerCat.id));
+    toolbar.appendChild(collapseBtn);
+  }
   const del = document.createElement('button');
   del.className = 'del';
   del.innerHTML = ICONS.x;
@@ -3055,6 +3199,7 @@ document.getElementById('acpSend').addEventListener('click', async () => {
 (async () => {
   await fetchGroups();
   await ensureCategoryGroups();
+  setupFolders();
   await fetchRatings();
   fetchAnnotations();
 })();
