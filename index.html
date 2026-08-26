@@ -468,6 +468,41 @@
   }
   .delete-x:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
 
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px 6px;
+    pointer-events: auto;
+  }
+  .tag-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(124,156,255,0.14);
+    color: var(--accent);
+    border: 1px solid rgba(124,156,255,0.3);
+    border-radius: 20px;
+    padding: 2px 6px 2px 9px;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .tag-chip .tag-x { cursor: pointer; opacity: 0.7; font-size: 10px; }
+  .tag-chip .tag-x:hover { opacity: 1; }
+  .tag-input {
+    background: none;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--muted);
+    font-size: 10.5px;
+    padding: 2px 2px;
+    width: 52px;
+    outline: none;
+  }
+  .tag-input:focus { border-color: var(--accent); width: 90px; }
+
   .rating-row {
     display: flex;
     align-items: center;
@@ -724,6 +759,78 @@
   .minimap-panel.show { display: block; }
   #minimapCanvas { display: block; cursor: pointer; border-radius: 6px; }
 
+  .ask-claude-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0e0e10;
+    border: none;
+    cursor: pointer;
+    z-index: 26;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+  }
+  .ask-claude-btn:hover { transform: scale(1.06); }
+  .ask-claude-btn.open { background: var(--panel2); color: var(--text); }
+
+  .ask-claude-panel {
+    display: none;
+    position: fixed;
+    bottom: 76px;
+    left: 20px;
+    width: 320px;
+    max-height: 60vh;
+    background: rgba(23,23,26,0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    z-index: 26;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ask-claude-panel.open { display: flex; }
+  .acp-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 14px; }
+  .acp-close { cursor: pointer; color: var(--muted); width: 16px; height: 16px; }
+  .acp-hint { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .ask-claude-panel textarea {
+    width: 100%;
+    min-height: 64px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .ask-claude-panel button#acpSend {
+    background: var(--accent);
+    border: none;
+    color: #0e0e10;
+    font-weight: 600;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .acp-list { overflow-y: auto; max-height: 220px; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .acp-item { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 11.5px; }
+  .acp-item-text { color: var(--text); margin-bottom: 4px; }
+  .acp-item-meta { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10.5px; }
+  .acp-status { padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .acp-status.pending { background: rgba(245,197,66,0.15); color: var(--star); }
+  .acp-status.done { background: rgba(107,212,138,0.15); color: #6bd48a; }
+
   #batchBar {
     display: none;
     position: fixed;
@@ -824,6 +931,18 @@
   <canvas id="minimapCanvas" width="180" height="130"></canvas>
 </div>
 
+<button class="ask-claude-btn" id="askClaudeBtn" title="Ask Claude to find more references"></button>
+<div class="ask-claude-panel" id="askClaudePanel">
+  <div class="acp-header">
+    <span>Ask Claude</span>
+    <span class="acp-close" id="acpClose"></span>
+  </div>
+  <p class="acp-hint">This queues a request — Claude sees it and acts on it next time you're together in a session, not instantly.</p>
+  <textarea id="acpInput" placeholder="e.g. Find me 10 more references of neon signage lighting"></textarea>
+  <button id="acpSend">Send</button>
+  <div class="acp-list" id="acpList"></div>
+</div>
+
 <div id="batchBar">
   <span id="batchCount">0 selected</span>
   <span>Rate all:</span>
@@ -856,6 +975,9 @@ const ICONS = {
   grid: `<svg ${ICON_ATTRS}><rect x="3" y="3" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1"/></svg>`,
   check: `<svg ${ICON_ATTRS}><path d="M4 12.5 9.5 18 20 6"/></svg>`,
   x: `<svg ${ICON_ATTRS}><path d="M5 5l14 14M19 5 5 19"/></svg>`,
+  plus: `<svg ${ICON_ATTRS}><path d="M12 5v14M5 12h14"/></svg>`,
+  chat: `<svg ${ICON_ATTRS}><path d="M4 5h16v11H8l-4 4z"/></svg>`,
+  clock: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`,
 };
 
 document.getElementById('gsIcon').innerHTML = ICONS.sparkles;
@@ -1312,6 +1434,7 @@ const ANNOTATION_COLORS = ["#eaeaec", "#f5c542", "#7c9cff", "#e06b6b", "#6bd48a"
 const GROUP_COLOR_PRESETS = ["#7c9cff", "#f5c542", "#e06b6b", "#6bd48a", "#c77dff", "#4fd1c5"];
 const ANNOTATIONS_API = "https://reference-library-ratings.image-ref.workers.dev/annotations";
 const GROUPS_API = "https://reference-library-ratings.image-ref.workers.dev/groups";
+const REQUESTS_API = "https://reference-library-ratings.image-ref.workers.dev/requests";
 
 function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
 function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file}`; }
@@ -1534,6 +1657,24 @@ CATEGORIES.forEach(cat => {
       figcap.textContent = img.caption;
       fig.appendChild(figcap);
 
+      const tagRow = document.createElement('div');
+      tagRow.className = 'tag-row';
+      tagRow.addEventListener('mousedown', (e) => e.stopPropagation());
+      const tagChips = document.createElement('div');
+      tagChips.className = 'tag-chips';
+      tagRow.appendChild(tagChips);
+      const tagInput = document.createElement('input');
+      tagInput.className = 'tag-input';
+      tagInput.placeholder = '+ tag';
+      tagInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        addTags(id, tagInput.value);
+        tagInput.value = '';
+      });
+      tagRow.appendChild(tagInput);
+      fig.appendChild(tagRow);
+
       const ratingRow = document.createElement('div');
       ratingRow.className = 'rating-row';
       ratingRow.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -1569,7 +1710,7 @@ CATEGORIES.forEach(cat => {
       });
 
       world.appendChild(fig);
-      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, src, caption: img.caption, isVideo: isVideo(img.file), url: img.url || null };
+      cardIndex[id] = { cardEl: fig, starsEl, noteBtn, noteEditor, textarea, checkEl, tagChips, src, caption: img.caption, isVideo: isVideo(img.file), url: img.url || null };
     });
   });
 
@@ -1598,6 +1739,7 @@ function showCategory(id) {
   document.getElementById('crumb').innerHTML = cat ? `›  ${ICONS[cat.icon]} ${cat.title}` : '';
   document.getElementById('floatingToolbar').classList.add('open');
   hideHoverPreview();
+  zoomToFit(id);
   updateMinimap();
   history.replaceState(null, '', `#${id}`);
 }
@@ -1904,11 +2046,14 @@ function initCanvasInteractions(catId) {
   });
 }
 
-// "Organize": pack every visible card into a dense grid (no leftover gaps),
-// ordered to roughly match current position (reading order: top-to-bottom, left-to-right)
-// so relative arrangement is preserved even though spacing is fully compacted.
+// "Organize": shelf-pack every visible card by its ACTUAL rendered width/height (cards can be
+// individually resized now, so a fixed cell size can no longer guarantee no overlap) into rows
+// that wrap at a fixed target width, each row's height set by its tallest member. Ordered to
+// roughly match current position (reading order: top-to-bottom, left-to-right) so relative
+// arrangement is preserved even though spacing is fully compacted.
 function organize(catId) {
-  const cellW = CARD_W + COL_GAP, cellH = CARD_H + ROW_GAP;
+  const gap = 24;
+  const wrapWidth = 1500;
   const cards = Object.entries(cardIndex).filter(([id, c]) => c.cardEl.dataset.cat === catId && c.cardEl.style.display !== 'none');
   if (!cards.length) return;
 
@@ -1916,23 +2061,56 @@ function organize(catId) {
     id, c,
     x: parseFloat(c.cardEl.style.left),
     y: parseFloat(c.cardEl.style.top),
+    w: c.cardEl.offsetWidth,
+    h: c.cardEl.offsetHeight,
   }));
-  // Band into rows using half a card-height as tolerance, so near-aligned rows sort cleanly
-  // even if not pixel-perfect, then order left-to-right within each row.
-  const rowBand = CARD_H / 2;
+  // Band into rows using a generous fixed tolerance (only affects the initial reading-order
+  // sort, not the actual packing below) so near-aligned rows sort cleanly pre-pack.
+  const rowBand = 200;
   withPos.sort((a, b) => {
     const bandA = Math.round(a.y / rowBand), bandB = Math.round(b.y / rowBand);
     return bandA - bandB || a.x - b.x;
   });
 
   const originX = 20, originY = 20;
-  withPos.forEach((item, i) => {
-    const col = i % COLS, row = Math.floor(i / COLS);
-    const x = originX + col * cellW, y = originY + row * cellH;
-    item.c.cardEl.style.left = x + 'px';
-    item.c.cardEl.style.top = y + 'px';
-    persistPosition(item.id, x, y);
+  let cursorX = originX, cursorY = originY, rowH = 0;
+  withPos.forEach(item => {
+    if (cursorX > originX && cursorX + item.w > originX + wrapWidth) {
+      cursorX = originX;
+      cursorY += rowH + gap;
+      rowH = 0;
+    }
+    item.c.cardEl.style.left = cursorX + 'px';
+    item.c.cardEl.style.top = cursorY + 'px';
+    persistPosition(item.id, cursorX, cursorY);
+    cursorX += item.w + gap;
+    rowH = Math.max(rowH, item.h);
   });
+
+  zoomToFit(catId);
+}
+
+// Zooms/pans so every visible card in the category is on-screen at once.
+function zoomToFit(catId) {
+  const st = canvasState[catId];
+  const cards = Object.values(cardIndex).filter(c => c.cardEl.dataset.cat === catId && c.cardEl.style.display !== 'none');
+  if (!cards.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  cards.forEach(c => {
+    const x = parseFloat(c.cardEl.style.left), y = parseFloat(c.cardEl.style.top);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + c.cardEl.offsetWidth);
+    maxY = Math.max(maxY, y + c.cardEl.offsetHeight);
+  });
+  const pad = 60;
+  const contentW = (maxX - minX) + pad * 2, contentH = (maxY - minY) + pad * 2;
+  const vpRect = st.viewportEl.getBoundingClientRect();
+  const zoom = Math.max(0.08, Math.min(1, vpRect.width / contentW, vpRect.height / contentH));
+  st.zoom = zoom;
+  st.panX = vpRect.width / 2 - (minX + (maxX - minX) / 2) * zoom;
+  st.panY = vpRect.height / 2 - (minY + (maxY - minY) / 2) * zoom;
+  applyTransform(catId);
 }
 
 // ---------- Lightbox ----------
@@ -1970,6 +2148,45 @@ function renderStars(id) {
   else { noteBtn.classList.remove('has-note'); }
 }
 
+function renderTags(id) {
+  const entry = cardIndex[id];
+  if (!entry) return;
+  const tags = (ratings[id] && ratings[id].tags) || [];
+  entry.tagChips.innerHTML = '';
+  tags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    const label = document.createElement('span');
+    label.textContent = tag;
+    label.addEventListener('click', (e) => { e.stopPropagation(); globalSearchInput.value = tag; globalSearchInput.dispatchEvent(new Event('input')); globalSearchInput.focus(); });
+    chip.appendChild(label);
+    const x = document.createElement('span');
+    x.className = 'tag-x';
+    x.textContent = '×';
+    x.addEventListener('click', (e) => { e.stopPropagation(); removeTag(id, tag); });
+    chip.appendChild(x);
+    entry.tagChips.appendChild(chip);
+  });
+}
+
+function addTags(id, raw) {
+  const incoming = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  if (!incoming.length) return;
+  const current = (ratings[id] && ratings[id].tags) || [];
+  const merged = [...new Set([...current, ...incoming])];
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), tags: merged };
+  renderTags(id);
+  postRecord(id, { tags: merged });
+}
+
+function removeTag(id, tag) {
+  const current = (ratings[id] && ratings[id].tags) || [];
+  const merged = current.filter(t => t !== tag);
+  ratings[id] = { ...(ratings[id] || { stars: 0, note: '' }), tags: merged };
+  renderTags(id);
+  postRecord(id, { tags: merged });
+}
+
 async function fetchRatings() {
   try {
     const res = await fetch(RATINGS_API);
@@ -1984,6 +2201,7 @@ async function fetchRatings() {
       removeCard(id);
     } else {
       renderStars(id);
+      renderTags(id);
       if (rec && typeof rec.x === 'number' && typeof rec.y === 'number') {
         cardIndex[id].cardEl.style.left = rec.x + 'px';
         cardIndex[id].cardEl.style.top = rec.y + 'px';
@@ -2582,15 +2800,19 @@ function searchMatches(query) {
   const scored = [];
   SEARCH_INDEX.forEach(item => {
     let hay = item.label.toLowerCase();
+    let tagHit = false;
     if (item.kind === 'image') {
-      const note = (ratings[item.imageId] && ratings[item.imageId].note) || '';
-      hay += ' ' + note.toLowerCase();
+      const rec = ratings[item.imageId];
+      hay += ' ' + ((rec && rec.note) || '').toLowerCase();
+      const tags = (rec && rec.tags) || [];
+      tagHit = tags.some(t => t.toLowerCase().includes(q));
+      hay += ' ' + tags.join(' ').toLowerCase();
     }
     const idx = hay.indexOf(q);
-    if (idx !== -1) scored.push({ item, score: idx === 0 ? 0 : (item.kind === 'image' ? 2 : 1) });
+    if (idx !== -1) scored.push({ item, score: tagHit ? -1 : (idx === 0 ? 0 : (item.kind === 'image' ? 2 : 1)) });
   });
   scored.sort((a, b) => a.score - b.score);
-  return scored.slice(0, 8).map(s => s.item);
+  return scored.slice(0, 14).map(s => s.item);
 }
 
 function topGhostCompletion(query) {
@@ -2683,6 +2905,80 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '/' && !isTypingTarget(e.target)) {
     e.preventDefault();
     globalSearchInput.focus();
+  }
+});
+
+// ---------- "Ask Claude" request queue (durable, async — not live chat) ----------
+const askClaudeBtn = document.getElementById('askClaudeBtn');
+const askClaudePanel = document.getElementById('askClaudePanel');
+const acpInput = document.getElementById('acpInput');
+const acpList = document.getElementById('acpList');
+askClaudeBtn.innerHTML = ICONS.plus;
+document.getElementById('acpClose').innerHTML = ICONS.x;
+
+async function fetchRequests() {
+  try {
+    const res = await fetch(REQUESTS_API);
+    const items = await res.json();
+    renderRequests(items);
+  } catch (e) {
+    console.warn('Could not load requests', e);
+  }
+}
+
+function renderRequests(items) {
+  acpList.innerHTML = '';
+  [...items].reverse().forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'acp-item';
+    const text = document.createElement('div');
+    text.className = 'acp-item-text';
+    text.textContent = item.text;
+    row.appendChild(text);
+    const meta = document.createElement('div');
+    meta.className = 'acp-item-meta';
+    const status = document.createElement('span');
+    status.className = 'acp-status ' + item.status;
+    status.textContent = item.status;
+    meta.appendChild(status);
+    const when = document.createElement('span');
+    when.textContent = new Date(item.createdAt).toLocaleDateString();
+    meta.appendChild(when);
+    row.appendChild(meta);
+    if (item.resultNote) {
+      const note = document.createElement('div');
+      note.className = 'acp-item-meta';
+      note.style.marginTop = '4px';
+      note.textContent = item.resultNote;
+      row.appendChild(note);
+    }
+    acpList.appendChild(row);
+  });
+}
+
+function toggleAskClaude(open) {
+  const willOpen = open ?? !askClaudePanel.classList.contains('open');
+  askClaudePanel.classList.toggle('open', willOpen);
+  askClaudeBtn.classList.toggle('open', willOpen);
+  askClaudeBtn.innerHTML = willOpen ? ICONS.x : ICONS.plus;
+  if (willOpen) fetchRequests();
+}
+askClaudeBtn.addEventListener('click', () => toggleAskClaude());
+document.getElementById('acpClose').addEventListener('click', () => toggleAskClaude(false));
+
+document.getElementById('acpSend').addEventListener('click', async () => {
+  const text = acpInput.value.trim();
+  if (!text) return;
+  try {
+    await fetch(REQUESTS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify({ text }),
+    });
+    acpInput.value = '';
+    fetchRequests();
+  } catch (e) {
+    console.warn('Could not send request', e);
   }
 });
 
