@@ -52,6 +52,7 @@
     white-space: nowrap;
   }
   nav#catnav a:hover { color: var(--text); border-color: var(--accent); }
+  nav#catnav a#homeLink { color: var(--text); border-color: var(--accent); font-weight: 600; }
 
   .toolbar {
     display: flex;
@@ -284,8 +285,9 @@
   .thumb-wrap { position: relative; pointer-events: none; }
   figure.card img, figure.card video {
     width: 100%;
-    height: 180px;
-    object-fit: cover;
+    height: auto;
+    max-height: 320px;
+    object-fit: contain;
     display: block;
     background: #000;
   }
@@ -451,7 +453,7 @@
 <header>
   <h1>Reference Library</h1>
   <p class="tagline">Motion design reference, organized by category. Drag images to rearrange, scroll to zoom, drag empty space to pan.</p>
-  <nav id="catnav"></nav>
+  <nav id="catnav"><a href="#" id="homeLink">🏠 Home</a></nav>
   <div class="toolbar" id="toolbar" style="display:none;">
     <input type="text" id="search" placeholder="Search captions & notes…">
     <label>Min rating
@@ -663,7 +665,7 @@ function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file
 function snap(v) { return Math.round(v / GRID_SNAP) * GRID_SNAP; }
 
 // ---------- Default cluster layout (used when an image has no saved x/y) ----------
-const CARD_W = 220, CARD_H = 280, COL_GAP = 20, ROW_GAP = 30, COLS = 5, CLUSTER_GAP = 60, LABEL_H = 30;
+const CARD_W = 220, CARD_H = 420, COL_GAP = 20, ROW_GAP = 30, COLS = 5, CLUSTER_GAP = 60, LABEL_H = 30; // CARD_H sized for the tallest possible thumb (max-height:320px) + caption/rating chrome, now that cards preserve real aspect ratio instead of a fixed 180px crop
 
 function computeDefaultLayout(cat) {
   // returns { positions: {imageId: {x,y}}, zones: [{label,x,y}], worldW, worldH }
@@ -695,7 +697,6 @@ function computeDefaultLayout(cat) {
 }
 
 // ---------- Build DOM ----------
-const catnav = document.getElementById('catnav');
 const categoriesWrap = document.getElementById('categoriesWrap');
 const tileGrid = document.getElementById('tileGrid');
 
@@ -717,13 +718,9 @@ function previewThumbs(cat) {
   return thumbs;
 }
 
-CATEGORIES.forEach(cat => {
-  const a = document.createElement('a');
-  a.href = `#${cat.id}`;
-  a.textContent = `${cat.emoji} ${cat.title}`;
-  a.addEventListener('click', (e) => { e.preventDefault(); showCategory(cat.id); });
-  catnav.appendChild(a);
+document.getElementById('homeLink').addEventListener('click', (e) => { e.preventDefault(); showHome(); });
 
+CATEGORIES.forEach(cat => {
   const thumbs = previewThumbs(cat);
   const tile = document.createElement('div');
   tile.className = 'category-tile';
@@ -748,7 +745,7 @@ CATEGORIES.forEach(cat => {
   catEl.id = cat.id;
   const backBtn = document.createElement('button');
   backBtn.className = 'back-btn';
-  backBtn.textContent = '← All categories';
+  backBtn.textContent = '← Home';
   backBtn.addEventListener('click', showHome);
   catEl.appendChild(backBtn);
   const headerBlock = document.createElement('div');
@@ -1007,13 +1004,22 @@ function initCanvasInteractions(catId, controls) {
 
   vp.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const rect = vp.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
-    const worldX = (mouseX - st.panX) / st.zoom, worldY = (mouseY - st.panY) / st.zoom;
-    const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    st.zoom = Math.min(3, Math.max(0.3, st.zoom * factor));
-    st.panX = mouseX - worldX * st.zoom;
-    st.panY = mouseY - worldY * st.zoom;
+    if (e.ctrlKey || e.metaKey) {
+      // Pinch-to-zoom on a trackpad (and ctrl/cmd+scroll on a mouse) arrives as wheel
+      // events with ctrlKey set — that's the browser's own signal to distinguish a
+      // zoom gesture from a plain two-finger scroll, which should just pan.
+      const rect = vp.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+      const worldX = (mouseX - st.panX) / st.zoom, worldY = (mouseY - st.panY) / st.zoom;
+      const factor = Math.pow(1.0025, -e.deltaY); // gentle, continuous — old flat ±10%/tick felt too fast
+      st.zoom = Math.min(3, Math.max(0.3, st.zoom * factor));
+      st.panX = mouseX - worldX * st.zoom;
+      st.panY = mouseY - worldY * st.zoom;
+    } else {
+      // Two-finger trackpad drag (or a plain mouse wheel) — pan in all directions.
+      st.panX -= e.deltaX;
+      st.panY -= e.deltaY;
+    }
     applyTransform(catId);
   }, { passive: false });
 

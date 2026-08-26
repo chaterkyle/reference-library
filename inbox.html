@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Send to Reference Library</title>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --panel: #17171a;
+    --border: #2a2a2e;
+    --text: #eaeaec;
+    --muted: #9a9aa0;
+    --accent: #7c9cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  form {
+    width: 100%;
+    max-width: 420px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type="url"], textarea {
+    width: 100%;
+    background: #1d1d21;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 16px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    width: 100%;
+    background: var(--accent);
+    color: #0e0e10;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:active { opacity: 0.85; }
+  button:disabled { opacity: 0.5; }
+  #status { margin-top: 14px; font-size: 13px; text-align: center; min-height: 18px; }
+  #status.ok { color: #6bd48a; }
+  #status.err { color: #e06b6b; }
+</style>
+</head>
+<body>
+
+<form id="f">
+  <h1>Send to Reference Library</h1>
+  <p class="sub">Paste a link (Instagram, Dribbble, wherever) — it queues up for review, doesn't touch the live site directly.</p>
+  <label for="url">Link</label>
+  <input type="url" id="url" placeholder="https://..." required autocomplete="off" autocapitalize="off">
+  <label for="note">Note (optional — which category, why you liked it)</label>
+  <textarea id="note" placeholder="e.g. cinematography moves"></textarea>
+  <button type="submit">Add to inbox</button>
+  <div id="status"></div>
+</form>
+
+<script>
+const API = "https://reference-library-ratings.image-ref.workers.dev/inbox";
+const AUTH_KEY = "kyle-ref-lib-2026";
+
+const form = document.getElementById('f');
+const statusEl = document.getElementById('status');
+const urlEl = document.getElementById('url');
+const noteEl = document.getElementById('note');
+const btn = form.querySelector('button');
+
+// If shared in via ?url=... (e.g. from a Shortcut), prefill and offer instant submit.
+const params = new URLSearchParams(location.search);
+if (params.get('url')) urlEl.value = params.get('url');
+if (params.get('note')) noteEl.value = params.get('note');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  btn.disabled = true;
+  statusEl.textContent = 'Sending…';
+  statusEl.className = '';
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Key': AUTH_KEY },
+      body: JSON.stringify({ url: urlEl.value.trim(), note: noteEl.value.trim() }),
+    });
+    if (!res.ok) throw new Error('request failed');
+    statusEl.textContent = 'Added ✓';
+    statusEl.className = 'ok';
+    urlEl.value = '';
+    noteEl.value = '';
+  } catch (err) {
+    statusEl.textContent = 'Failed to send — try again.';
+    statusEl.className = 'err';
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
