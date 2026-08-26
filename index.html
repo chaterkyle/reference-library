@@ -594,9 +594,23 @@
     border-radius: 14px;
     pointer-events: none;
   }
+  .group-resize-handle {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    cursor: nwse-resize;
+    pointer-events: auto;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    opacity: 0.7;
+  }
+  .group-resize-handle:hover { opacity: 1; border-color: var(--accent); }
   .group-titlebar {
     position: absolute;
-    top: -30px;
+    top: -38px;
     left: -1px;
     display: flex;
     align-items: center;
@@ -606,12 +620,12 @@
   }
   .group-titlebar.dragging { cursor: grabbing; }
   .group-title {
-    font-size: 13px;
-    font-weight: 600;
-    padding: 3px 8px;
+    font-size: 19px;
+    font-weight: 700;
+    padding: 4px 10px;
     border-radius: 6px;
     outline: none;
-    max-width: 260px;
+    max-width: 360px;
   }
   .group-toolbar {
     display: none;
@@ -1438,7 +1452,7 @@ function initCanvasInteractions(catId) {
 
   vp.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('figure.card, .annotation-wrap, .group-titlebar')) return; // handled by drag logic below
+    if (e.target.closest('figure.card, .annotation-wrap, .group-titlebar, .group-resize-handle')) return; // handled by drag logic below
 
     if (st.placingText) {
       const wp = worldPointFromEvent(e);
@@ -1655,6 +1669,58 @@ function initCanvasInteractions(catId) {
     if (!resizeEl) return;
     persistSize(resizeEl.dataset.id, parseFloat(resizeEl.style.width));
     resizeEl = null;
+  });
+
+  // Resizing a group — its own corner handle scales the box AND every card inside it
+  // proportionally (both position and size), like resizing a group in Figma/PowerPoint.
+  let resizeGroupEl = null, resizeGroupStart = null, resizeGroupMembers = [];
+  vp.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const handle = e.target.closest('.group-resize-handle');
+    if (!handle) return;
+    resizeGroupEl = handle.closest('.group-box');
+    const gx = parseFloat(resizeGroupEl.style.left), gy = parseFloat(resizeGroupEl.style.top);
+    const gw = parseFloat(resizeGroupEl.style.width), gh = parseFloat(resizeGroupEl.style.height);
+    resizeGroupStart = { x: gx, y: gy, w: gw, h: gh, mouseX: e.clientX, mouseY: e.clientY };
+    resizeGroupMembers = [];
+    Object.entries(cardIndex).forEach(([mid, c]) => {
+      if (c.cardEl.dataset.cat !== catId) return;
+      const cx = parseFloat(c.cardEl.style.left), cy = parseFloat(c.cardEl.style.top);
+      const cw = c.cardEl.offsetWidth;
+      const centerX = cx + cw / 2, centerY = cy + c.cardEl.offsetHeight / 2;
+      if (centerX >= gx && centerX <= gx + gw && centerY >= gy && centerY <= gy + gh) {
+        resizeGroupMembers.push({ id: mid, el: c.cardEl, relX: cx - gx, relY: cy - gy, startW: cw });
+      }
+    });
+    e.stopPropagation();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!resizeGroupEl) return;
+    const dx = (e.clientX - resizeGroupStart.mouseX) / st.zoom;
+    const dy = (e.clientY - resizeGroupStart.mouseY) / st.zoom;
+    const newW = Math.max(160, resizeGroupStart.w + dx);
+    const newH = Math.max(120, resizeGroupStart.h + dy);
+    const scaleX = newW / resizeGroupStart.w;
+    const scaleY = newH / resizeGroupStart.h;
+    const scale = Math.min(scaleX, scaleY); // uniform card scale so individual cards never distort
+    resizeGroupEl.style.width = newW + 'px';
+    resizeGroupEl.style.height = newH + 'px';
+    resizeGroupMembers.forEach(m => {
+      m.el.style.left = snap(resizeGroupStart.x + m.relX * scaleX) + 'px';
+      m.el.style.top = snap(resizeGroupStart.y + m.relY * scaleY) + 'px';
+      m.el.style.width = Math.max(120, Math.min(640, m.startW * scale)) + 'px';
+    });
+  });
+  window.addEventListener('mouseup', () => {
+    if (!resizeGroupEl) return;
+    const id = resizeGroupEl.dataset.id;
+    persistGroup(id, { w: parseFloat(resizeGroupEl.style.width), h: parseFloat(resizeGroupEl.style.height) });
+    resizeGroupMembers.forEach(m => {
+      persistPosition(m.id, parseFloat(m.el.style.left), parseFloat(m.el.style.top));
+      persistSize(m.id, parseFloat(m.el.style.width));
+    });
+    resizeGroupEl = null; resizeGroupMembers = [];
+    updateMinimap();
   });
 }
 
@@ -1927,7 +1993,12 @@ function renderGroupEl(id, rec, world) {
   toolbar.appendChild(del);
   titlebar.appendChild(toolbar);
 
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'group-resize-handle';
+  resizeHandle.title = 'Drag to resize — contents scale to fit';
+
   box.appendChild(titlebar);
+  box.appendChild(resizeHandle);
   world.insertBefore(box, world.firstChild); // paint behind cards/annotations
   groupIndex[id] = { el: box, titleEl: title, titlebarEl: titlebar };
   return box;
