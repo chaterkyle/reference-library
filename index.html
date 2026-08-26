@@ -532,15 +532,11 @@ const CATEGORIES = [
       {
         id: "graphic-camera-moves", title: "2D/3D Graphic Camera Moves", folder: "graphic-camera-moves",
         images: [
-          { file: "graphic-camera-moves-001.mp4", caption: "Isometric CG factory scene with a moving/panning camera, looping (\"Factory in 3D Isometric Style. Loop Animation.\")." },
           { file: "graphic-camera-moves-002.gif", caption: "Plexus + isometric AE camera creating a dynamic 3D parallax grid background (Rich Hinchcliffe, \"3D Isometric Grid Loop\")." },
           { file: "graphic-camera-moves-003.mp4", caption: "3D scene with parallax camera movement for a website concept (ALEX BENDER, \"Parallax Website 3D animation\")." },
-          { file: "graphic-camera-moves-004.mp4", caption: "Isometric 2D/3D hybrid scene with looping camera move (Roman Trishchuk, \"Isometric loop animation\")." },
-          { file: "graphic-camera-moves-005.mp4", caption: "Isometric warehouse CG scene, panning/looping camera (\"3D Warehouse in Isometric Style. Loop Animation.\")." },
-          { file: "graphic-camera-moves-006.mp4", caption: "Isometric 3D scene animation with camera movement (Tran Mau Tri Tam, \"3D isometric animation\")." },
-          { file: "graphic-camera-moves-007.mp4", caption: "CG showreel scene clip with camera motion (eml, \"3D animation showreel scene\")." },
-          { file: "graphic-camera-moves-008.mp4", caption: "Drone-style camera flying through/over a 3D scene (Ravinder, \"Drone Camera Animation\")." },
-          { file: "graphic-camera-moves-009.mp4", caption: "Camera move through an abstract 3D light-forms render (Genius Studio, \"Abstract Light Forms — Motion Study\")." },
+          { file: "graphic-camera-moves-007.mp4", caption: "Push-in camera move on a CG statue showreel scene (eml, \"3D animation showreel scene\")." },
+          { file: "graphic-camera-moves-008.mp4", caption: "Drone camera descending through clouds toward a structure (Ravinder, \"Drone Camera Animation\")." },
+          { file: "graphic-camera-moves-009.mp4", caption: "Camera pulling back from an abstract 3D light-forms render (Genius Studio, \"Abstract Light Forms — Motion Study\")." },
           { file: "graphic-camera-moves-010.mp4", caption: "Orbiting camera around a 3D product render (\"3D Product Animation / Smartphone Shot 02\")." }
         ]
       },
@@ -593,7 +589,11 @@ const CATEGORIES = [
         images: [
           { file: "color-and-grade-008.jpg", caption: "Abstract 3D render, 'Heat' — glossy pink, coral, and pale-yellow forms on black." },
           { file: "color-and-grade-009.jpg", caption: "Abstract textured render, 'Heat' — teal-grey surfaces streaked with green, orange, purple light." },
-          { file: "color-and-grade-010.jpg", caption: "Neon 3D render, 'Heat' — reflective grey form overlaid with electric pink, red, teal, lime streaks." }
+          { file: "color-and-grade-010.jpg", caption: "Neon 3D render, 'Heat' — reflective grey form overlaid with electric pink, red, teal, lime streaks." },
+          { file: "graphic-camera-moves-001.mp4", folder: "graphic-camera-moves", caption: "Isometric CG factory floor loop — fixed camera, animated conveyor/robotics (\"Factory in 3D Isometric Style. Loop Animation.\")." },
+          { file: "graphic-camera-moves-004.mp4", folder: "graphic-camera-moves", caption: "Flat isometric icon loop — fixed camera, elements animating in place (Roman Trishchuk, \"Isometric loop animation\")." },
+          { file: "graphic-camera-moves-005.mp4", folder: "graphic-camera-moves", caption: "Isometric CG warehouse loop — fixed camera, animated figures/props (\"3D Warehouse in Isometric Style. Loop Animation.\")." },
+          { file: "graphic-camera-moves-006.mp4", folder: "graphic-camera-moves", caption: "Isometric CG product scene loop — fixed camera, animated drone/cable elements (Tran Mau Tri Tam, \"3D isometric animation\")." }
         ]
       }
     ]
@@ -710,7 +710,7 @@ function previewThumbs(cat) {
   for (const g of groups) {
     for (const img of g.images) {
       if (isVideo(img.file)) continue; // stick to stills for the preview collage
-      thumbs.push(`images/${g.folder}/${img.file}`);
+      thumbs.push(`images/${img.folder || g.folder}/${img.file}`);
       if (thumbs.length >= 3) return thumbs;
     }
   }
@@ -803,7 +803,7 @@ CATEGORIES.forEach(cat => {
     }
     group.images.forEach(img => {
       const id = imageId(cat.id, group.id, img.file);
-      const src = `images/${group.folder}/${img.file}`;
+      const src = `images/${img.folder || group.folder}/${img.file}`;
       const pos = layout.positions[id];
 
       const fig = document.createElement('figure');
@@ -817,9 +817,15 @@ CATEGORIES.forEach(cat => {
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'thumb-wrap';
       thumbWrap.innerHTML = isVideo(img.file)
-        ? `<video src="${src}" muted loop playsinline></video>`
+        ? `<video src="${src}" muted loop playsinline preload="metadata"></video>`
         : `<img src="${src}" loading="lazy" alt="">`;
       fig.appendChild(thumbWrap);
+
+      if (isVideo(img.file)) {
+        const videoEl = thumbWrap.querySelector('video');
+        thumbWrap.addEventListener('mouseenter', () => { videoEl.play().catch(() => {}); });
+        thumbWrap.addEventListener('mouseleave', () => { videoEl.pause(); videoEl.currentTime = 0; });
+      }
 
       const checkEl = document.createElement('div');
       checkEl.className = 'select-check';
