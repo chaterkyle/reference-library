@@ -158,6 +158,84 @@
     height: 32px;
   }
 
+  .global-search {
+    position: fixed;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(480px, 90vw);
+    z-index: 25;
+    background: rgba(23,23,26,0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .global-search .gs-icon { color: var(--accent); font-size: 15px; }
+  .search-wrap { position: relative; flex: 1; min-width: 0; }
+  .search-wrap .search-ghost, .search-wrap #globalSearch {
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 10px 0;
+    margin: 0;
+    border: none;
+    white-space: pre;
+  }
+  .search-ghost {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .search-ghost .typed { color: transparent; }
+  .search-ghost .suggest { color: var(--muted); opacity: 0.65; }
+  #globalSearch {
+    position: relative;
+    display: block;
+    width: 100%;
+    background: transparent;
+    color: var(--text);
+    outline: none;
+  }
+  #globalSearch::placeholder { color: var(--muted); }
+
+  .search-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    max-height: 60vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  }
+  .search-dropdown.open { display: block; }
+  .search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .search-row:hover { background: var(--accent); }
+  .search-row:hover .sr-title, .search-row:hover .sr-sub { color: #0e0e10; }
+  .sr-thumb-icon { font-size: 16px; flex-shrink: 0; }
+  .sr-text { min-width: 0; }
+  .sr-title { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-sub { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   .canvas-viewport {
     position: relative;
     width: 100%;
@@ -239,6 +317,12 @@
     width: 260px;
   }
 
+  @keyframes cardFloat {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(2px, -3px); }
+    50% { transform: translate(-2px, 1px); }
+    75% { transform: translate(1px, 3px); }
+  }
   figure.card {
     position: absolute;
     margin: 0;
@@ -251,11 +335,24 @@
     flex-direction: column;
     cursor: grab;
     user-select: none;
+    animation: cardFloat 7s ease-in-out infinite;
+    transition: transform 0.18s ease, box-shadow 0.3s ease, outline-color 0.3s ease;
+  }
+  figure.card:hover {
+    transform: scale(1.045) !important;
+    z-index: 8;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
   }
   figure.card.dragging {
     cursor: grabbing;
+    transform: none !important;
+    animation-play-state: paused;
     box-shadow: 0 12px 30px rgba(0,0,0,0.5);
     z-index: 10;
+  }
+  figure.card.search-highlight {
+    outline: 3px solid var(--accent);
+    box-shadow: 0 0 24px 6px rgba(124,156,255,0.5);
   }
   .thumb-wrap { position: relative; pointer-events: none; }
   body.alt-export-mode .thumb-wrap { pointer-events: auto; }
@@ -593,6 +690,15 @@
   <span class="crumb" id="crumb"></span>
 </header>
 
+<div class="global-search">
+  <span class="gs-icon">✦</span>
+  <div class="search-wrap">
+    <div class="search-ghost" id="searchGhost"><span class="typed"></span><span class="suggest"></span></div>
+    <input type="text" id="globalSearch" placeholder="Search styles, categories, captions… ( / )" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="search-dropdown" id="searchDropdown"></div>
+</div>
+
 <main>
   <div id="home">
     <div class="tile-grid" id="tileGrid"></div>
@@ -613,11 +719,7 @@
     <button id="ft-add-text" title="Add text label">T</button>
   </div>
   <div class="ft-divider"></div>
-  <div class="ft-group">
-    <input type="text" id="search" placeholder="Search…">
-  </div>
-  <div class="ft-divider"></div>
-  <button class="ft-icon-btn" id="ft-help" title="Drag empty space to box-select · Hold Space+drag to pan · Ctrl/Cmd+scroll (or pinch) to zoom, plain scroll pans · Alt+drag a card onto Finder to save it · Right-click a card for more options · Click empty space to deselect · Hotkeys: Delete, Esc, Cmd/Ctrl+A, T, +/-, Shift+0">?</button>
+  <button class="ft-icon-btn" id="ft-help" title="Drag empty space to box-select · Hold Space+drag to pan · Ctrl/Cmd+scroll (or pinch) to zoom, plain scroll pans · Alt+drag a card onto Finder to save it · Right-click a card for more options · Click empty space to deselect · Press / to search · Hotkeys: Delete, Esc, Cmd/Ctrl+A, T, +/-, Shift+0">?</button>
 </div>
 
 <div class="context-menu" id="contextMenu"></div>
@@ -825,6 +927,33 @@ function isVideo(file) { return /\.(mp4|webm|mov)$/i.test(file); }
 function imageId(catId, subId, file) { return `${catId}__${subId || "_"}__${file}`; }
 function snap(v) { return Math.round(v / GRID_SNAP) * GRID_SNAP; }
 
+// ---------- Search index (categories, sub-categories, and every image caption) ----------
+function buildSearchIndex() {
+  const items = [];
+  CATEGORIES.forEach(cat => {
+    items.push({ kind: 'category', title: cat.title, label: `${cat.emoji} ${cat.title}`, catId: cat.id });
+    const groupsArr = cat.subs || [{ id: null, title: null, folder: cat.folder, images: cat.images }];
+    groupsArr.forEach(g => {
+      if (g.title) {
+        items.push({ kind: 'sub', title: g.title, label: `${cat.emoji} ${cat.title} › ${g.title}`, catId: cat.id, subId: g.id });
+      }
+      g.images.forEach(img => {
+        items.push({
+          kind: 'image',
+          title: img.caption,
+          label: img.caption,
+          catId: cat.id,
+          subId: g.id,
+          imageId: imageId(cat.id, g.id, img.file),
+          breadcrumb: `${cat.emoji} ${cat.title}${g.title ? ' › ' + g.title : ''}`,
+        });
+      });
+    });
+  });
+  return items;
+}
+const SEARCH_INDEX = buildSearchIndex();
+
 // ---------- Default cluster layout (used when an image has no saved x/y) ----------
 const CARD_W = 220, CARD_H = 420, COL_GAP = 20, ROW_GAP = 30, COLS = 5, CLUSTER_GAP = 60, LABEL_H = 30; // CARD_H sized for the tallest possible thumb (max-height:320px) + caption/rating chrome, now that cards preserve real aspect ratio instead of a fixed 180px crop
 
@@ -950,6 +1079,9 @@ CATEGORIES.forEach(cat => {
       fig.dataset.cat = cat.id;
       fig.style.left = pos.x + 'px';
       fig.style.top = pos.y + 'px';
+      // Desynchronize the idle float so cards don't all bob in lockstep.
+      fig.style.animationDuration = (6 + Math.random() * 3).toFixed(2) + 's';
+      fig.style.animationDelay = (-(Math.random() * 9)).toFixed(2) + 's';
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'thumb-wrap';
@@ -1394,7 +1526,6 @@ async function fetchRatings() {
       }
     }
   });
-  applyFilters();
   updateTileCounts();
 }
 
@@ -1763,7 +1894,6 @@ function setRating(id, stars) {
   ratings[id] = { ...(current || {}), stars: newStars, updatedAt: new Date().toISOString() };
   renderStars(id);
   postRecord(id, { stars: newStars });
-  applyFilters();
 }
 
 function setNote(id, note) {
@@ -1880,21 +2010,6 @@ window.addEventListener('contextmenu', (e) => {
   if (!e.target.closest('figure.card')) closeContextMenu();
 });
 
-// ---------- Filter ----------
-const searchInput = document.getElementById('search');
-
-function applyFilters() {
-  const q = searchInput.value.trim().toLowerCase();
-  Object.entries(cardIndex).forEach(([id, { cardEl }]) => {
-    const rec = ratings[id];
-    const note = (rec && rec.note ? rec.note : '').toLowerCase();
-    const caption = cardEl.dataset.caption;
-    const matches = !q || caption.includes(q) || note.includes(q);
-    cardEl.classList.toggle('hidden', !matches);
-    cardEl.style.display = matches ? '' : 'none';
-  });
-}
-searchInput.addEventListener('input', applyFilters);
 
 // ---------- Global floating toolbar (acts on whichever category is currently open) ----------
 document.getElementById('ft-zoom-in').addEventListener('click', () => {
@@ -1974,6 +2089,122 @@ document.getElementById('newCategoryBtn').addEventListener('click', () => {
   });
   clearSelection();
   alert(`Marked ${ids.length} image(s) for a new "${name.trim()}" category. They're hidden for now — let Claude know and it'll build the real category and move them in.`);
+});
+
+// ---------- Global search: live suggestions + jump-to-result, inline autofill for style/category names ----------
+const globalSearchInput = document.getElementById('globalSearch');
+const searchDropdown = document.getElementById('searchDropdown');
+const searchGhostTyped = document.querySelector('#searchGhost .typed');
+const searchGhostSuggest = document.querySelector('#searchGhost .suggest');
+
+function searchMatches(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const scored = [];
+  SEARCH_INDEX.forEach(item => {
+    let hay = item.label.toLowerCase();
+    if (item.kind === 'image') {
+      const note = (ratings[item.imageId] && ratings[item.imageId].note) || '';
+      hay += ' ' + note.toLowerCase();
+    }
+    const idx = hay.indexOf(q);
+    if (idx !== -1) scored.push({ item, score: idx === 0 ? 0 : (item.kind === 'image' ? 2 : 1) });
+  });
+  scored.sort((a, b) => a.score - b.score);
+  return scored.slice(0, 8).map(s => s.item);
+}
+
+function topGhostCompletion(query) {
+  const q = query.trim();
+  if (!q) return '';
+  const hit = SEARCH_INDEX.find(item => (item.kind === 'category' || item.kind === 'sub') && item.title.toLowerCase().startsWith(q.toLowerCase()));
+  return hit ? hit.title.slice(q.length) : '';
+}
+
+function renderSearchDropdown(items) {
+  searchDropdown.innerHTML = '';
+  if (!items.length) { searchDropdown.classList.remove('open'); return; }
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'search-row';
+    if (item.kind === 'image') {
+      row.innerHTML = `<span class="sr-thumb-icon">🖼️</span><div class="sr-text"><div class="sr-title">${item.title}</div><div class="sr-sub">${item.breadcrumb}</div></div>`;
+    } else {
+      row.innerHTML = `<span class="sr-thumb-icon">${item.kind === 'category' ? '📁' : '📂'}</span><div class="sr-text"><div class="sr-title">${item.label}</div></div>`;
+    }
+    row.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus so the click isn't lost to the input's blur
+    row.addEventListener('click', () => goToSearchResult(item));
+    searchDropdown.appendChild(row);
+  });
+  searchDropdown.classList.add('open');
+}
+
+function resetSearchUI() {
+  globalSearchInput.value = '';
+  searchDropdown.classList.remove('open');
+  searchDropdown.innerHTML = '';
+  searchGhostTyped.textContent = '';
+  searchGhostSuggest.textContent = '';
+}
+
+function goToSearchResult(item) {
+  showCategory(item.catId);
+  resetSearchUI();
+  globalSearchInput.blur();
+
+  if (item.kind === 'image') {
+    const c = cardIndex[item.imageId];
+    if (!c) return;
+    const st = canvasState[item.catId];
+    const cx = parseFloat(c.cardEl.style.left) + c.cardEl.offsetWidth / 2;
+    const cy = parseFloat(c.cardEl.style.top) + c.cardEl.offsetHeight / 2;
+    const vpRect = st.viewportEl.getBoundingClientRect();
+    st.zoom = 1;
+    st.panX = vpRect.width / 2 - cx;
+    st.panY = vpRect.height / 2 - cy;
+    applyTransform(item.catId);
+    c.cardEl.classList.add('search-highlight');
+    setTimeout(() => c.cardEl.classList.remove('search-highlight'), 1600);
+  }
+}
+
+globalSearchInput.addEventListener('input', () => {
+  const q = globalSearchInput.value;
+  renderSearchDropdown(searchMatches(q));
+  searchGhostTyped.textContent = q;
+  searchGhostSuggest.textContent = topGhostCompletion(q);
+});
+
+globalSearchInput.addEventListener('keydown', (e) => {
+  if ((e.key === 'Tab' || e.key === 'ArrowRight') && searchGhostSuggest.textContent) {
+    e.preventDefault();
+    globalSearchInput.value += searchGhostSuggest.textContent;
+    searchGhostTyped.textContent = globalSearchInput.value;
+    searchGhostSuggest.textContent = '';
+    renderSearchDropdown(searchMatches(globalSearchInput.value));
+    return;
+  }
+  if (e.key === 'Enter') {
+    const matches = searchMatches(globalSearchInput.value);
+    if (matches.length) goToSearchResult(matches[0]);
+    return;
+  }
+  if (e.key === 'Escape') {
+    resetSearchUI();
+    globalSearchInput.blur();
+  }
+});
+globalSearchInput.addEventListener('focus', () => {
+  if (globalSearchInput.value) renderSearchDropdown(searchMatches(globalSearchInput.value));
+});
+globalSearchInput.addEventListener('blur', () => {
+  setTimeout(() => searchDropdown.classList.remove('open'), 150);
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !isTypingTarget(e.target)) {
+    e.preventDefault();
+    globalSearchInput.focus();
+  }
 });
 
 fetchRatings();
