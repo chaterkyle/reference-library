@@ -665,7 +665,6 @@
   #lightbox .close { position: absolute; top: 24px; right: 32px; color: var(--muted); font-size: 28px; cursor: pointer; }
 
   .hover-preview {
-    display: none;
     position: fixed;
     max-width: 46vw;
     background: rgba(23,23,26,0.95);
@@ -676,9 +675,12 @@
     box-shadow: 0 20px 50px rgba(0,0,0,0.6);
     z-index: 40;
     pointer-events: none;
-    transition: left 0.12s ease, top 0.12s ease;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.92);
+    transition: transform 0.15s ease, opacity 0.15s ease, visibility 0.15s;
   }
-  .hover-preview.show { display: block; }
+  .hover-preview.show { opacity: 1; visibility: visible; transform: scale(1); }
   .hp-media img, .hp-media video {
     display: block;
     max-width: min(44vw, 640px);
@@ -917,8 +919,8 @@ function showHoverPreview(c) {
   if (!c) return;
   hpMedia.innerHTML = c.isVideo ? `<video src="${c.src}" muted loop autoplay playsinline></video>` : `<img src="${c.src}" alt="">`;
   hpCap.textContent = c.caption;
+  positionHoverPreview(c.cardEl); // position first, while still invisible, so it never visibly jumps
   hoverPreviewEl.classList.add('show');
-  positionHoverPreview(c.cardEl);
 }
 
 // Docks the preview beside whichever side of the card has more room, and keeps it
@@ -928,16 +930,17 @@ function showHoverPreview(c) {
 function positionHoverPreview(cardEl) {
   const cardRect = cardEl.getBoundingClientRect();
   const margin = 20;
+  const gap = 56; // extra clearance from the card so the panel doesn't crowd the cursor
   const estW = Math.min(window.innerWidth * 0.46, 640) + 28;
   const estH = Math.min(window.innerHeight * 0.62, 640) + 60;
   const spaceRight = window.innerWidth - cardRect.right;
   const spaceLeft = cardRect.left;
 
   let left;
-  if (spaceRight >= estW + margin || spaceRight >= spaceLeft) {
-    left = Math.min(cardRect.right + margin, window.innerWidth - estW - margin);
+  if (spaceRight >= estW + gap || spaceRight >= spaceLeft) {
+    left = Math.min(cardRect.right + gap, window.innerWidth - estW - margin);
   } else {
-    left = Math.max(cardRect.left - estW - margin, margin);
+    left = Math.max(cardRect.left - estW - gap, margin);
   }
   let top = cardRect.top + cardRect.height / 2 - estH / 2;
   top = Math.max(margin, Math.min(top, window.innerHeight - estH - margin));
